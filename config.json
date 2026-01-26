@@ -1,0 +1,91 @@
+{
+  "dashboard": {
+    "title": "Disaster Management System - Admin Dashboard",
+    "version": "1.0.0",
+    "description": "Real-time monitoring dashboard for buoy data and landslide detection"
+  },
+  "supabase": {
+    "url": "YOUR_SUPABASE_URL_HERE",
+    "key": "YOUR_SUPABASE_API_KEY_HERE",
+    "tables": {
+      "buoys": {
+        "name": "buoys",
+        "columns": [
+          "id",
+          "location",
+          "water_level",
+          "wave_height",
+          "temperature",
+          "status",
+          "last_update"
+        ]
+      },
+      "landslide_poles": {
+        "name": "landslide_poles",
+        "columns": [
+          "id",
+          "location",
+          "soil_moisture",
+          "displacement",
+          "temperature",
+          "risk_level",
+          "status",
+          "last_update"
+        ]
+      }
+    }
+  },
+  "settings": {
+    "refreshInterval": 30,
+    "maxRefreshInterval": 300,
+    "minRefreshInterval": 5,
+    "autoRefreshEnabled": true
+  },
+  "charts": {
+    "waterLevel": {
+      "type": "line",
+      "title": "Water Level Trend (Buoys)",
+      "enabled": true
+    },
+    "waveHeight": {
+      "type": "bar",
+      "title": "Wave Height Analysis",
+      "enabled": true
+    },
+    "landslideRisk": {
+      "type": "doughnut",
+      "title": "Landslide Risk Levels",
+      "enabled": true
+    },
+    "soilMoisture": {
+      "type": "radar",
+      "title": "Soil Moisture Distribution",
+      "enabled": true
+    }
+  },
+  "theme": {
+    "primaryColor": "#2563eb",
+    "secondaryColor": "#10b981",
+    "dangerColor": "#ef4444",
+    "warningColor": "#f59e0b",
+    "darkBackground": "#1f2937",
+    "darkerBackground": "#111827",
+    "cardBackground": "#374151",
+    "textPrimary": "#f3f4f6",
+    "textSecondary": "#d1d5db",
+    "borderColor": "#4b5563"
+  },
+  "statusOptions": {
+    "buoys": ["active", "warning", "critical", "inactive"],
+    "poles": ["active", "warning", "inactive"],
+    "riskLevels": ["low", "warning", "critical"]
+  },
+  "features": {
+    "dataExport": true,
+    "dataSearch": true,
+    "dataFilter": true,
+    "autoRefresh": true,
+    "manualRefresh": true,
+    "alerts": true
+  }
+}

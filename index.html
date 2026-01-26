@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Management System - Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/module.js" type="module"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>DMS</h1>
+                <p>Disaster Management</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-section="dashboard">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-section="buoy-data">
+                    <span class="icon">🌊</span>
+                    <span>Buoy Data</span>
+                </a>
+                <a href="#" class="nav-item" data-section="landslide-data">
+                    <span class="icon">⛰️</span>
+                    <span>Landslide Detection</span>
+                </a>
+                <a href="#" class="nav-item" data-section="alerts">
+                    <span class="icon">🚨</span>
+                    <span>Alerts</span>
+                </a>
+                <a href="#" class="nav-item" data-section="settings">
+                    <span class="icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h2 id="page-title">Dashboard Overview</h2>
+                </div>
+                <div class="header-right">
+                    <button id="refresh-btn" class="btn-icon" title="Refresh Data">🔄</button>
+                    <button id="settings-btn" class="btn-icon" title="Settings">👤</button>
+                </div>
+            </header>
+
+            <!-- Content Sections -->
+            <div class="content">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="section active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon buoy">🌊</div>
+                            <div class="stat-content">
+                                <h3>Active Buoys</h3>
+                                <p class="stat-value" id="buoy-count">0</p>
+                                <span class="stat-label">Monitoring</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon pole">⛰️</div>
+                            <div class="stat-content">
+                                <h3>Landslide Poles</h3>
+                                <p class="stat-value" id="pole-count">0</p>
+                                <span class="stat-label">Active Sensors</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon alert">⚠️</div>
+                            <div class="stat-content">
+                                <h3>Active Alerts</h3>
+                                <p class="stat-value" id="alert-count">0</p>
+                                <span class="stat-label">Critical</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon status">✅</div>
+                            <div class="stat-content">
+                                <h3>System Status</h3>
+                                <p class="stat-value" id="system-status">Operational</p>
+                                <span class="stat-label">All Systems</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h3>Water Level Trend (Buoys)</h3>
+                            <canvas id="waterLevelChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Wave Height Analysis</h3>
+                            <canvas id="waveHeightChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Landslide Risk Levels</h3>
+                            <canvas id="landslideRiskChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Soil Moisture Distribution</h3>
+                            <canvas id="soilMoistureChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Buoy Data Section -->
+                <section id="buoy-data" class="section">
+                    <div class="filters">
+                        <input type="text" id="buoy-search" placeholder="Search buoys..." class="search-input">
+                        <select id="buoy-filter" class="filter-select">
+                            <option value="all">All Buoys</option>
+                            <option value="active">Active</option>
+                            <option value="warning">Warning</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                        <button id="export-buoy-btn" class="btn-primary">Export Data</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="buoyTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Buoy ID</th>
+                                    <th>Location</th>
+                                    <th>Water Level (m)</th>
+                                    <th>Wave Height (m)</th>
+                                    <th>Temperature (°C)</th>
+                                    <th>Status</th>
+                                    <th>Last Update</th>
+                                </tr>
+                            </thead>
+                            <tbody id="buoy-tbody">
+                                <tr><td colspan="7" class="text-center">Loading buoy data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Landslide Data Section -->
+                <section id="landslide-data" class="section">
+                    <div class="filters">
+                        <input type="text" id="pole-search" placeholder="Search poles..." class="search-input">
+                        <select id="pole-filter" class="filter-select">
+                            <option value="all">All Poles</option>
+                            <option value="active">Active</option>
+                            <option value="warning">Warning</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                        <button id="export-pole-btn" class="btn-primary">Export Data</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="poleTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Pole ID</th>
+                                    <th>Location</th>
+                                    <th>Soil Moisture (%)</th>
+                                    <th>Displacement (mm)</th>
+                                    <th>Temperature (°C)</th>
+                                    <th>Risk Level</th>
+                                    <th>Status</th>
+                                    <th>Last Update</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pole-tbody">
+                                <tr><td colspan="8" class="text-center">Loading landslide pole data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Alerts Section -->
+                <section id="alerts" class="section">
+                    <div class="alert-filter">
+                        <select id="alert-filter" class="filter-select">
+                            <option value="all">All Alerts</option>
+                            <option value="critical">Critical</option>
+                            <option value="warning">Warning</option>
+                            <option value="info">Information</option>
+                        </select>
+                        <button id="clear-alerts-btn" class="btn-secondary">Clear All</button>
+                    </div>
+                    <div id="alerts-container" class="alerts-list">
+                        <p class="text-center">No alerts at this time.</p>
+                    </div>
+                </section>
+
+                <!-- Settings Section -->
+                <section id="settings" class="section">
+                    <div class="settings-card">
+                        <h3>Supabase Configuration</h3>
+                        <div class="form-group">
+                            <label for="supabase-url">Supabase URL:</label>
+                            <input type="text" id="supabase-url" placeholder="Your Supabase URL">
+                        </div>
+                        <div class="form-group">
+                            <label for="supabase-key">Supabase API Key:</label>
+                            <input type="password" id="supabase-key" placeholder="Your Supabase API Key">
+                        </div>
+                        <button id="save-settings-btn" class="btn-primary">Save Configuration</button>
+                        <p id="settings-message" class="settings-message" style="display:none;"></p>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>Data Refresh Settings</h3>
+                        <div class="form-group">
+                            <label for="refresh-interval">Refresh Interval (seconds):</label>
+                            <input type="number" id="refresh-interval" value="30" min="5" max="300">
+                        </div>
+                        <button id="save-refresh-btn" class="btn-primary">Save Refresh Settings</button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Alert Details</h2>
+            <div id="alert-details"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
