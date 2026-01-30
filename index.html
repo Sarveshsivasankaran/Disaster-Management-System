@@ -51,14 +51,11 @@
                     <span class="icon">🚁</span>
                     <span class="label">RESCUE OPS</span>
                 </a>
-                 <a href="#" class="nav-item" data-section="sos">
+                <a href="#" class="nav-item" data-section="sos">
                     <span class="icon">🆘</span>
                     <span class="label">SOS ALERTS</span>
                 </a>
-                <a href="#" class="nav-item" data-section="settings">
-                    <span class="icon">⚙️</span>
-                    <span class="label">SYSTEM CONFIG</span>
-                </a>
+
             </nav>
 
             <div class="system-status">
@@ -374,92 +371,49 @@
                             </div>
                         </div>
                     </div>
-                     </section>
-    </div> 
-            <!-- SOS Alert View -->
-<div id="sos" class="content-view">
-  <section class="panel glass-panel full-height sos-panel">
-
-    <h2 class="panel-title">
-      <span class="icon">🆘</span> EMERGENCY SOS
-    </h2>
-
-    <p class="sos-text">
-      Send an emergency alert with your verified location.
-    </p>
-
-    <!-- User Name -->
-    <input
-      type="text"
-      id="sosName"
-      class="neon-input"
-      placeholder="Your name"
-      required
-    />
-    <input
-  type="tel"
-  id="sosPhone"
-  class="neon-input"
-  placeholder="Phone number"
-  required
-/>
-
-
-    <!-- Location -->
-    <div class="location-box">
-      <input
-        type="text"
-        id="sosLocation"
-        class="neon-input"
-        placeholder="Location (auto-filled)"
-        readonly
-      />
-      <button class="action-btn small" onclick="useCurrentLocation()">
-        📍 Use Current Location
-      </button>
-    </div>
-
-    <!-- Emergency Description -->
-    <textarea
-      id="sosMessage"
-      class="sos-textarea"
-      placeholder="Describe the type of emergency (flood, fire, medical, etc.)"
-      required
-    ></textarea>
-
-    <!-- Submit -->
-    <button class="sos-btn pulse" onclick="sendSOS()">
-      🚨 SEND SOS ALERT
-    </button>
-
-  </section>
-</div>
-
-           
-            <div id="settings" class="content-view">
-                <div class="panel glass-panel settings-container">
-                    <h2>SYSTEM CONFIGURATION</h2>
-                    <div class="form-group">
-                        <label>SUPABASE URL</label>
-                        <input type="text" id="supabase-url" class="neon-input" value="https://xyz.supabase.co">
-                    </div>
-                    <div class="form-group">
-                        <label>SUPABASE KEY</label>
-                        <input type="password" id="supabase-key" class="neon-input" value="****************">
-                    </div>
-                    <div class="form-group">
-                        <label>REFRESH RATE (MS)</label>
-                        <input type="range" class="neon-range" min="1000" max="10000" value="3000">
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="auto-evac" checked>
-                        <label for="auto-evac">AUTO-TRIGGER EVAC ALERTS</label>
-                    </div>
-                    <button class="action-btn" onclick="alert('CONFIG SAVED')">SAVE CONFIG</button>
-                    <button class="action-btn danger-btn">SYSTEM RESET</button>
-                </div>
+                </section>
             </div>
-       
+            <!-- SOS Alert View -->
+            <div id="sos" class="content-view">
+                <section class="panel glass-panel full-height sos-panel">
+
+                    <h2 class="panel-title">
+                        <span class="icon">🆘</span> EMERGENCY SOS
+                    </h2>
+
+                    <p class="sos-text">
+                        Send an emergency alert with your verified location.
+                    </p>
+
+                    <!-- User Name -->
+                    <input type="text" id="sosName" class="neon-input" placeholder="Your name" required />
+                    <input type="tel" id="sosPhone" class="neon-input" placeholder="Phone number" required />
+
+
+                    <!-- Location -->
+                    <div class="location-box">
+                        <input type="text" id="sosLocation" class="neon-input" placeholder="Location (auto-filled)"
+                            readonly />
+                        <button class="action-btn small" onclick="useCurrentLocation()">
+                            📍 Use Current Location
+                        </button>
+                    </div>
+
+                    <!-- Emergency Description -->
+                    <textarea id="sosMessage" class="sos-textarea"
+                        placeholder="Describe the type of emergency (flood, fire, medical, etc.)" required></textarea>
+
+                    <!-- Submit -->
+                    <button class="sos-btn pulse" onclick="sendSOS()">
+                        🚨 SEND SOS ALERT
+                    </button>
+
+                </section>
+            </div>
+
+
+
+
 
         </main>
     </div>
@@ -470,9 +424,9 @@
     <!-- Main App -->
     <script type="module" src="app.js"></script>
 
-<script src="https://unpkg.com/@supabase/supabase-js"></script>
-<script src="js/supabaseClient.js"></script>
-<script src="js/sos.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/sos.js"></script>
 
 </body>
 
