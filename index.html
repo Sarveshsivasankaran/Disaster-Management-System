@@ -17,7 +17,7 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/module.js" type="module"></script>
+    <!--<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/module.js" type="module"></script>-->
 </head>
 
 <body>
@@ -50,6 +50,10 @@
                 <a href="#" class="nav-item" data-section="rescue">
                     <span class="icon">🚁</span>
                     <span class="label">RESCUE OPS</span>
+                </a>
+                 <a href="#" class="nav-item" data-section="sos">
+                    <span class="icon">🆘</span>
+                    <span class="label">SOS ALERTS</span>
                 </a>
                 <a href="#" class="nav-item" data-section="settings">
                     <span class="icon">⚙️</span>
@@ -360,9 +364,68 @@
                             </div>
                         </div>
                     </div>
-                </section>
-            </div>
+                     </section>
+    </div> 
+            <!-- SOS Alert View -->
+<div id="sos" class="content-view">
+  <section class="panel glass-panel full-height sos-panel">
 
+    <h2 class="panel-title">
+      <span class="icon">🆘</span> EMERGENCY SOS
+    </h2>
+
+    <p class="sos-text">
+      Send an emergency alert with your verified location.
+    </p>
+
+    <!-- User Name -->
+    <input
+      type="text"
+      id="sosName"
+      class="neon-input"
+      placeholder="Your name"
+      required
+    />
+    <input
+  type="tel"
+  id="sosPhone"
+  class="neon-input"
+  placeholder="Phone number"
+  required
+/>
+
+
+    <!-- Location -->
+    <div class="location-box">
+      <input
+        type="text"
+        id="sosLocation"
+        class="neon-input"
+        placeholder="Location (auto-filled)"
+        readonly
+      />
+      <button class="action-btn small" onclick="useCurrentLocation()">
+        📍 Use Current Location
+      </button>
+    </div>
+
+    <!-- Emergency Description -->
+    <textarea
+      id="sosMessage"
+      class="sos-textarea"
+      placeholder="Describe the type of emergency (flood, fire, medical, etc.)"
+      required
+    ></textarea>
+
+    <!-- Submit -->
+    <button class="sos-btn pulse" onclick="sendSOS()">
+      🚨 SEND SOS ALERT
+    </button>
+
+  </section>
+</div>
+
+           
             <div id="settings" class="content-view">
                 <div class="panel glass-panel settings-container">
                     <h2>SYSTEM CONFIGURATION</h2>
@@ -386,6 +449,7 @@
                     <button class="action-btn danger-btn">SYSTEM RESET</button>
                 </div>
             </div>
+       
 
         </main>
     </div>
@@ -395,6 +459,11 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <!-- Main App -->
     <script type="module" src="app.js"></script>
+
+<script src="https://unpkg.com/@supabase/supabase-js"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/sos.js"></script>
+
 </body>
 
 </html>
