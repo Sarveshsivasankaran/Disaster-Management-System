@@ -245,9 +245,12 @@ GRANT SELECT ON v_recent_alerts TO anon;
 
 create table if not exists sos_alerts (
   id uuid primary key default gen_random_uuid(),
-  message text not null,
+  name text,
+  phone text,
+  description text,
+  location_text text,
   latitude double precision not null,
   longitude double precision not null,
-  status text default 'pending',
+  status text default 'NEW',
   created_at timestamp with time zone default now()
 );

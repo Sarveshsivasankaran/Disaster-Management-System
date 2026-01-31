@@ -781,6 +781,55 @@ class SentinelDashboard {
         container.insertBefore(div, container.firstChild);
         if (container.children.length > 20) container.removeChild(container.lastChild);
     }
+
+    deployRescueToLocation(lat, lng, info) {
+        if (!this.map) return;
+
+        console.log(`DEPLOYING RESCUE TO: ${lat}, ${lng}`);
+
+        // 1. Mark SOS Location
+        const sosIcon = L.divIcon({
+            className: 'sos-marker',
+            html: '🆘',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+        });
+
+        const marker = L.marker([lat, lng], { icon: sosIcon }).addTo(this.map)
+            .bindPopup(`<b style="color:red">EMERGENCY SOS</b><br>${info}`).openPopup();
+
+        // 2. Find closest resource (Simulated for fixed resources)
+        // In a real app, calculate distance to this.layers.resources children
+        const baseLat = 40.7300;
+        const baseLng = -74.0100;
+
+        // 3. Draw Route Line
+        const routeLine = L.polyline([[baseLat, baseLng], [lat, lng]], {
+            color: '#ff2a2a',
+            weight: 4,
+            dashArray: '10, 10',
+            className: 'rescue-route-anim'
+        }).addTo(this.map);
+
+        // 4. Send Alert
+        this.injectAlert(`RESCUE UNIT DEPLOYED TO SOS: ${info}`, 'critical');
+
+        // 5. Update Rescue Panel Numbers
+        const activeUnitsEl = document.querySelector('.rescue-panel .big-value');
+        if (activeUnitsEl) {
+            let current = parseInt(activeUnitsEl.textContent) || 0;
+            activeUnitsEl.textContent = current + 1;
+        }
+
+        // Auto Switch to Map View if not already
+        // document.querySelector('[data-section="dashboard"]').click();
+        this.map.flyTo([lat, lng], 14);
+
+        // cleanup after some time?
+        setTimeout(() => {
+            this.map.removeLayer(routeLine);
+        }, 30000);
+    }
 }
 
 // Initialize on Load

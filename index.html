@@ -376,38 +376,15 @@
             <!-- SOS Alert View -->
             <div id="sos" class="content-view">
                 <section class="panel glass-panel full-height sos-panel">
-
-                    <h2 class="panel-title">
-                        <span class="icon">🆘</span> EMERGENCY SOS
-                    </h2>
-
-                    <p class="sos-text">
-                        Send an emergency alert with your verified location.
-                    </p>
-
-                    <!-- User Name -->
-                    <input type="text" id="sosName" class="neon-input" placeholder="Your name" required />
-                    <input type="tel" id="sosPhone" class="neon-input" placeholder="Phone number" required />
-
-
-                    <!-- Location -->
-                    <div class="location-box">
-                        <input type="text" id="sosLocation" class="neon-input" placeholder="Location (auto-filled)"
-                            readonly />
-                        <button class="action-btn small" onclick="useCurrentLocation()">
-                            📍 Use Current Location
-                        </button>
+                    <div class="panel-header-actions">
+                        <h2 class="panel-title"><span class="icon">🆘</span> INCOMING SOS ALERTS</h2>
+                        <button class="action-btn small" onclick="fetchSOSAlerts()">🔄 REFRESH</button>
                     </div>
 
-                    <!-- Emergency Description -->
-                    <textarea id="sosMessage" class="sos-textarea"
-                        placeholder="Describe the type of emergency (flood, fire, medical, etc.)" required></textarea>
-
-                    <!-- Submit -->
-                    <button class="sos-btn pulse" onclick="sendSOS()">
-                        🚨 SEND SOS ALERT
-                    </button>
-
+                    <div id="sos-feed-container" class="sos-feed">
+                        <!-- Alerts Loaded via JS -->
+                        <div class="loading-spinner">Loading Alerts...</div>
+                    </div>
                 </section>
             </div>
 
@@ -426,7 +403,17 @@
 
     <script src="https://unpkg.com/@supabase/supabase-js"></script>
     <script src="js/supabaseClient.js"></script>
-    <script src="js/sos.js"></script>
+    <script src="js/sos_admin.js"></script>
+
+    <!-- Notification Popup -->
+    <div id="sos-popup" class="sos-notification-popup">
+        <div class="popup-icon">🚨</div>
+        <div class="popup-content">
+            <h4>EMERGENCY ALERT</h4>
+            <p id="popup-msg">New SOS Reported!</p>
+        </div>
+        <button onclick="document.getElementById('sos-popup').classList.remove('visible')">✖</button>
+    </div>
 
 </body>
 
