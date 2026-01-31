@@ -415,6 +415,22 @@
         <button onclick="document.getElementById('sos-popup').classList.remove('visible')">✖</button>
     </div>
 
+    <!-- SOS Details Modal -->
+    <div id="sos-details-modal" class="custom-modal-overlay">
+        <div class="custom-modal-content glass-panel">
+            <div class="custom-modal-header">
+                <h2>⚠️ ALERT COMMAND CENTER</h2>
+                <button class="close-modal-btn" onclick="closeSOSModal()">✖</button>
+            </div>
+            <div id="sos-modal-body" class="custom-modal-body">
+                <!-- Content Injected via JS -->
+            </div>
+            <div id="sos-modal-actions" class="custom-modal-actions">
+                <!-- Actions Injected via JS -->
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>

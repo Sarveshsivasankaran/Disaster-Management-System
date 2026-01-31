@@ -1,5 +1,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/+esm';
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
+import { ResourceLocator } from './js/resources/ResourceLocator.js';
 
 // ============================================================================
 // FUTURISTIC DASHBOARD CONTROLLER
@@ -12,6 +13,7 @@ class SentinelDashboard {
         this.map = null;
         this.riskChart = null;
         this.timers = [];
+        this.resourceLocator = null; // New Resource Locator
 
         this.init();
     }
@@ -26,6 +28,7 @@ class SentinelDashboard {
         // 1. Core UI Setup
         this.setupNavigation();
         this.startRealTimeClock();
+        this.setupMapControls();
 
         // 2. Visualization Initialization
         try {
@@ -122,9 +125,13 @@ class SentinelDashboard {
         // Layer Groups
         this.layers = {
             risk: L.layerGroup().addTo(this.map),
-            resources: L.layerGroup(),
+            resources: L.layerGroup(), // Hidden by default, activated on button click
             evac: L.layerGroup()
         };
+
+        // Initialize Resource Locator
+        this.resourceLocator = new ResourceLocator(this.map);
+        this.resourceLocator.resourceLayer = this.layers.resources; // Bind to our layer
 
         this.populateMapLayers(); // Keep structure, but we will make it dynamic
         this.locateUser(); // 1. Realtime User Location
@@ -162,6 +169,11 @@ class SentinelDashboard {
 
                     // 4. Fetch News & Verify Location
                     this.fetchLocationEvents(latitude, longitude);
+
+                    // 5. Initialize Resource Locator with Real Coords
+                    if (this.resourceLocator) {
+                        this.resourceLocator.init(latitude, longitude);
+                    }
                 },
                 (err) => {
                     console.warn("Geolocation denied/failed. Using default view.", err);
@@ -322,11 +334,22 @@ class SentinelDashboard {
 
                 // Switch Layers
                 const layerName = targetBtn.dataset.layer;
+
                 // Hide all
-                Object.values(this.layers).forEach(layer => this.map.removeLayer(layer));
+                Object.values(this.layers).forEach(layer => {
+                    if (this.map.hasLayer(layer)) {
+                        this.map.removeLayer(layer);
+                    }
+                });
+
                 // Show target
                 if (this.layers[layerName]) {
                     this.map.addLayer(this.layers[layerName]);
+
+                    // Trigger refresh if Resources
+                    if (layerName === 'resources' && this.resourceLocator) {
+                        this.resourceLocator.updateResourceLayer();
+                    }
                 }
             });
         });
@@ -390,24 +413,7 @@ class SentinelDashboard {
             console.error("Map Data Populate Error:", e);
         }
 
-        // Hardcoded Resources (Static Infrastructure is usually fixed)
-        const resources = [
-            { lat: 40.7300, lng: -74.0100, type: 'HOSPITAL' },
-            { lat: 40.7600, lng: -73.9900, type: 'FIRE_STATION' },
-            { lat: 40.7200, lng: -74.0400, type: 'SHELTER' }
-        ];
-
-        resources.forEach(res => {
-            const color = '#00f3ff';
-            L.circleMarker([res.lat, res.lng], {
-                radius: 6,
-                fillColor: color,
-                color: "#fff",
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.8
-            }).addTo(this.layers.resources).bindPopup(`<b>RESOURCE</b><br>${res.type}`);
-        });
+        // Hardcoded Resources removed in favor of ResourceLocator
     }
 
     updateGeospatialState(reading) {
