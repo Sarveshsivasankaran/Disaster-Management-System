@@ -37,7 +37,7 @@ class SentinelDashboard {
 
         // 3. Simulations (Make it alive)
         this.startSensorSimulation();
-        this.startRandomAlerts();
+       // this.startRandomAlerts();
 
         console.log("SENTINEL: Systems Online.");
     }
@@ -238,7 +238,7 @@ class SentinelDashboard {
                 status = `MAG ${mag}`;
                 statusClass = mag > 4.5 ? "status-warning" : "status-normal";
 
-                this.injectAlert(`SEISMIC EVENT DETECTED: ${quake.properties.place} (M${mag})`, 'warning');
+               //s.injectAlert(`SEISMIC EVENT DETECTED: ${quake.properties.place} (M${mag})`, 'warning');
             }
 
             // Update UI
@@ -296,7 +296,7 @@ class SentinelDashboard {
 
                 // Notify Dashboard
                 const topStory = this.activeFloodNews[0];
-                this.injectAlert(`NEWS ALERT: ${topStory.title}`, 'info');
+               // this.injectAlert(`NEWS ALERT: ${topStory.title}`, 'info');
 
                 // Update Risk Verification State
                 this.newsRiskVerification = true;
@@ -561,21 +561,22 @@ class SentinelDashboard {
         });
     }
 
-    startRandomAlerts() {
-        setInterval(() => {
-            if (Math.random() > 0.7) {
-                this.injectRandomAlert();
-            }
-        }, 8000);
-    }
+   // startRandomAlerts() {
+     //   setInterval(() => {
+     //       if (Math.random() > 0.7) {
+     
+    //this.injectRandomAlert();
+      //      }
+      //  }, 8000);
+  //  }
 
-    injectRandomAlert() {
-        const alerts = [
-            { msg: "WIND SPEED INCREASING - SECTOR 7", type: "warning" },
-            { msg: "SENSOR CONNECTION LOST - NODE 4", type: "warning" },
-            { msg: "RESCUE TEAM BETA CHECKING IN", type: "info" },
-            { msg: "STRUCTURAL VIBRATION DETECTED", type: "critical" }
-        ];
+   // injectRandomAlert() {
+     //   const alerts = [
+       //     { msg: "WIND SPEED INCREASING - SECTOR 7", type: "warning" },
+         //   { msg: "SENSOR CONNECTION LOST - NODE 4", type: "warning" },
+           // { msg: "RESCUE TEAM BETA CHECKING IN", type: "info" },
+            //{ msg: "STRUCTURAL VIBRATION DETECTED", type: "critical" }
+        //];
 
         const alert = alerts[Math.floor(Math.random() * alerts.length)];
         const container = document.getElementById('alert-feed');

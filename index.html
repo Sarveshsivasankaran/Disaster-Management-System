@@ -1,410 +1,460 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SENTINEL | Advanced Disaster Management System</title>
     <!-- Fonts -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;700&display=swap"
-        rel="stylesheet">
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;500;700&display=swap"
+      rel="stylesheet"
+    />
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
     <!-- Main CSS -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css" />
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/module.js" type="module"></script>
-</head>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/module.js"
+      type="module"
+    ></script>
+  </head>
 
-<body>
+  <body>
     <div class="app-container">
-        <!-- Left Sidebar -->
-        <aside class="sidebar glass-panel">
-            <div class="logo-area">
-                <div class="logo-icon"></div>
-                <h1>SENTINEL</h1>
-                <p class="subtitle">AI-POWERED RESPONSE</p>
+      <!-- Left Sidebar -->
+      <aside class="sidebar glass-panel">
+        <div class="logo-area">
+          <div class="logo-icon"></div>
+          <h1>SENTINEL</h1>
+          <p class="subtitle">AI-POWERED RESPONSE</p>
+        </div>
+
+        <nav class="main-nav">
+          <a href="#" class="nav-item active" data-section="dashboard">
+            <span class="icon">⚡</span>
+            <span class="label">COMMAND CENTER</span>
+          </a>
+          <a href="#" class="nav-item" data-section="sensors">
+            <span class="icon">📡</span>
+            <span class="label">LIVE SENSORS</span>
+          </a>
+          <a href="#" class="nav-item" data-section="analysis">
+            <span class="icon">🧠</span>
+            <span class="label">AI PREDICTIONS</span>
+          </a>
+          <a href="#" class="nav-item" data-section="evacuation">
+            <span class="icon">🏃</span>
+            <span class="label">EVACUATION</span>
+          </a>
+          <a href="#" class="nav-item" data-section="rescue">
+            <span class="icon">🚁</span>
+            <span class="label">RESCUE OPS</span>
+          </a>
+          <a href="#" class="nav-item" data-section="settings">
+            <span class="icon">⚙️</span>
+            <span class="label">SYSTEM CONFIG</span>
+          </a>
+        </nav>
+
+        <div class="system-status">
+          <div class="status-indicator online"></div>
+          <span>SYSTEM ONLINE</span>
+          <div class="server-time" id="server-time">00:00:00</div>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- Top Bar -->
+        <header class="top-bar glass-panel">
+          <div class="location-selector">
+            <span class="icon">📍</span>
+            <select id="location-select" class="neon-select">
+              <option value="all">GLOBAL VIEW</option>
+              <option value="coast-north">SECTOR: NORTH COAST</option>
+              <option value="city-central">SECTOR: CENTRAL CITY</option>
+              <option value="mountain-east">SECTOR: EAST MOUNTAINS</option>
+            </select>
+          </div>
+
+          <div class="alert-level-display">
+            <span class="label">THREAT LEVEL:</span>
+            <div class="level-indicator level-warning">ELEVATED</div>
+          </div>
+
+          <div class="top-actions">
+            <button id="refresh-btn" class="action-btn">🔄 REFRESH</button>
+            <div class="user-profile">
+              <div class="avatar">CMD</div>
+              <span>COMMANDER</span>
             </div>
+          </div>
+        </header>
 
-            <nav class="main-nav">
-                <a href="#" class="nav-item active" data-section="dashboard">
-                    <span class="icon">⚡</span>
-                    <span class="label">COMMAND CENTER</span>
-                </a>
-                <a href="#" class="nav-item" data-section="sensors">
-                    <span class="icon">📡</span>
-                    <span class="label">LIVE SENSORS</span>
-                </a>
-                <a href="#" class="nav-item" data-section="analysis">
-                    <span class="icon">🧠</span>
-                    <span class="label">AI PREDICTIONS</span>
-                </a>
-                <a href="#" class="nav-item" data-section="evacuation">
-                    <span class="icon">🏃</span>
-                    <span class="label">EVACUATION</span>
-                </a>
-                <a href="#" class="nav-item" data-section="rescue">
-                    <span class="icon">🚁</span>
-                    <span class="label">RESCUE OPS</span>
-                </a>
-                <a href="#" class="nav-item" data-section="settings">
-                    <span class="icon">⚙️</span>
-                    <span class="label">SYSTEM CONFIG</span>
-                </a>
-            </nav>
-
-            <div class="system-status">
-                <div class="status-indicator online"></div>
-                <span>SYSTEM ONLINE</span>
-                <div class="server-time" id="server-time">00:00:00</div>
-            </div>
-        </aside>
-
-        <!-- Main Content Area -->
-        <main class="main-content">
-            <!-- Top Bar -->
-            <header class="top-bar glass-panel">
-                <div class="location-selector">
-                    <span class="icon">📍</span>
-                    <select id="location-select" class="neon-select">
-                        <option value="all">GLOBAL VIEW</option>
-                        <option value="coast-north">SECTOR: NORTH COAST</option>
-                        <option value="city-central">SECTOR: CENTRAL CITY</option>
-                        <option value="mountain-east">SECTOR: EAST MOUNTAINS</option>
-                    </select>
+        <!-- Dashboard Grid -->
+        <div id="dashboard" class="content-view active">
+          <div class="dashboard-grid">
+            <!-- Live Sensors Panel (Top Left) -->
+            <section class="panel glass-panel sensors-panel">
+              <h2 class="panel-title">
+                <span class="icon">📊</span> LIVE TELEMETRY
+              </h2>
+              <div class="sensor-grid">
+                <div class="sensor-card">
+                  <div class="sensor-label">WAVE HEIGHT</div>
+                  <div class="sensor-value" id="val-wave">2.4m</div>
+                  <div class="sensor-status status-normal">NORMAL</div>
                 </div>
-
-                <div class="alert-level-display">
-                    <span class="label">THREAT LEVEL:</span>
-                    <div class="level-indicator level-warning">ELEVATED</div>
+                <div class="sensor-card">
+                  <div class="sensor-label">WATER LEVEL</div>
+                  <div class="sensor-value" id="val-water">4.1m</div>
+                  <div class="sensor-status status-warning">RISING</div>
                 </div>
-
-                <div class="top-actions">
-                    <button id="refresh-btn" class="action-btn">🔄 REFRESH</button>
-                    <div class="user-profile">
-                        <div class="avatar">CMD</div>
-                        <span>COMMANDER</span>
-                    </div>
+                <div class="sensor-card">
+                  <div class="sensor-label">WIND SPEED</div>
+                  <div class="sensor-value" id="val-wind">45km/h</div>
+                  <div class="sensor-status status-normal">STABLE</div>
                 </div>
-            </header>
-
-            <!-- Dashboard Grid -->
-            <div id="dashboard" class="content-view active">
-                <div class="dashboard-grid">
-
-                    <!-- Live Sensors Panel (Top Left) -->
-                    <section class="panel glass-panel sensors-panel">
-                        <h2 class="panel-title"><span class="icon">📊</span> LIVE TELEMETRY</h2>
-                        <div class="sensor-grid">
-                            <div class="sensor-card">
-                                <div class="sensor-label">WAVE HEIGHT</div>
-                                <div class="sensor-value" id="val-wave">2.4m</div>
-                                <div class="sensor-status status-normal">NORMAL</div>
-                            </div>
-                            <div class="sensor-card">
-                                <div class="sensor-label">WATER LEVEL</div>
-                                <div class="sensor-value" id="val-water">4.1m</div>
-                                <div class="sensor-status status-warning">RISING</div>
-                            </div>
-                            <div class="sensor-card">
-                                <div class="sensor-label">WIND SPEED</div>
-                                <div class="sensor-value" id="val-wind">45km/h</div>
-                                <div class="sensor-status status-normal">STABLE</div>
-                            </div>
-                            <div class="sensor-card">
-                                <div class="sensor-label">SEISMIC</div>
-                                <div class="sensor-value" id="val-seismic">0.2g</div>
-                                <div class="sensor-status status-normal">QUIET</div>
-                            </div>
-                            <div class="sensor-card">
-                                <div class="sensor-label">TEMPERATURE</div>
-                                <div class="sensor-value" id="val-temp">--°C</div>
-                                <div class="sensor-status status-normal">NORMAL</div>
-                            </div>
-                            <div class="sensor-card">
-                                <div class="sensor-label">BATTERY</div>
-                                <div class="sensor-value" id="val-bat">--%</div>
-                                <div class="sensor-status status-normal">STABLE</div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- AI Risk Panel (Top Right) -->
-                    <section class="panel glass-panel ai-panel">
-                        <h2 class="panel-title"><span class="icon">🤖</span> AI RISK ASSESSMENT</h2>
-                        <div class="ai-content">
-                            <div class="risk-meter-container">
-                                <canvas id="riskMeter"></canvas>
-                                <div class="risk-overlay">
-                                    <div class="risk-percentage" id="risk-score">68%</div>
-                                    <div class="risk-label">PROBABILITY</div>
-                                </div>
-                            </div>
-                            <div class="ai-stats">
-                                <div class="stat-row">
-                                    <span>CONFIDENCE:</span>
-                                    <span class="highlight-blue">86%</span>
-                                </div>
-                                <div class="stat-row">
-                                    <span>PREDICTED:</span>
-                                    <span class="highlight-red">FLOOD SURGE</span>
-                                </div>
-                                <div class="stat-row">
-                                    <span>ETA:</span>
-                                    <span class="highlight-amber">04:30:00</span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Interactive Map (Center Large) -->
-                    <section class="panel glass-panel map-panel">
-                        <div class="map-header">
-                            <h2 class="panel-title"><span class="icon">🗺️</span> GEOSPATIAL INTELLIGENCE</h2>
-                            <div class="map-controls">
-                                <button class="map-btn active" data-layer="risk">RISK ZONES</button>
-                                <button class="map-btn" data-layer="resources">RESOURCES</button>
-                                <button class="map-btn" data-layer="evac">EVAC ROUTES</button>
-                            </div>
-                        </div>
-                        <div id="main-map" class="map-container"></div>
-                    </section>
-
-                    <!-- Rescue Command (Bottom Left) -->
-                    <section class="panel glass-panel rescue-panel">
-                        <h2 class="panel-title"><span class="icon">🚑</span> RESCUE OPS</h2>
-                        <div class="rescue-grid">
-                            <div class="info-block">
-                                <span class="label">ACTIVE TEAMS</span>
-                                <span class="value big-value">12</span>
-                            </div>
-                            <div class="info-block">
-                                <span class="label">VICTIMS LOCATED</span>
-                                <span class="value big-value warning-text">143</span>
-                            </div>
-                            <div class="info-block full-width">
-                                <span class="label">STRUCTURAL INTEGRITY MAP</span>
-                                <div class="integrity-bar">
-                                    <div class="bar-fill" style="width: 75%"></div>
-                                </div>
-                                <span class="sub-label">CITY SECTOR 4: 75% SAFE</span>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Alert Feed (Right Column) -->
-                    <section class="panel glass-panel alerts-panel">
-                        <h2 class="panel-title"><span class="icon">⚠️</span> ALERT FEED</h2>
-                        <div class="alerts-container" id="alert-feed">
-                            <!-- Alerts will be injected here via JS -->
-                            <div class="alert-item critical">
-                                <div class="alert-time">10:42:15</div>
-                                <div class="alert-msg">FLOOD SURGE DETECTED - SECTOR B</div>
-                            </div>
-                            <div class="alert-item warning">
-                                <div class="alert-time">10:40:02</div>
-                                <div class="alert-msg">SEISMIC ACTIVITY SPIKE - COASTAL</div>
-                            </div>
-                            <div class="alert-item info">
-                                <div class="alert-time">10:38:55</div>
-                                <div class="alert-msg">RESCUE TEAM ALPHA DEPLOYED</div>
-                            </div>
-                        </div>
-                    </section>
-
+                <div class="sensor-card">
+                  <div class="sensor-label">SEISMIC</div>
+                  <div class="sensor-value" id="val-seismic">0.2g</div>
+                  <div class="sensor-status status-normal">QUIET</div>
                 </div>
-            </div>
-
-            <!-- Detailed Sensors View -->
-            <div id="sensors" class="content-view">
-                <section class="panel glass-panel full-height">
-                    <div class="panel-header-actions">
-                        <h2 class="panel-title"><span class="icon">📡</span> SENSOR NETWORK STATUS</h2>
-                        <input type="text" class="neon-input" placeholder="SEARCH NODE ID...">
-                    </div>
-                    <div class="table-responsive">
-                        <table class="neon-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>LOCATION</th>
-                                    <th>TYPE</th>
-                                    <th>READING</th>
-                                    <th>STATUS</th>
-                                    <th>LAST PING</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><span class="highlight-blue">NODE-01</span></td>
-                                    <td>COAST NORTH</td>
-                                    <td>WATER LEVEL</td>
-                                    <td>4.2m</td>
-                                    <td><span class="status-badge normal">NORMAL</span></td>
-                                    <td>0s ago</td>
-                                </tr>
-                                <tr>
-                                    <td><span class="highlight-blue">NODE-02</span></td>
-                                    <td>CITY CENTER</td>
-                                    <td>VIBRATION</td>
-                                    <td>0.04g</td>
-                                    <td><span class="status-badge normal">NORMAL</span></td>
-                                    <td>1s ago</td>
-                                </tr>
-                                <tr>
-                                    <td><span class="highlight-blue">NODE-03</span></td>
-                                    <td>ZONE B</td>
-                                    <td>WIND</td>
-                                    <td>45km/h</td>
-                                    <td><span class="status-badge warning">HIGH</span></td>
-                                    <td>0s ago</td>
-                                </tr>
-                                <tr>
-                                    <td><span class="highlight-blue">NODE-04</span></td>
-                                    <td>EAST BAY</td>
-                                    <td>WATER LEVEL</td>
-                                    <td>5.1m</td>
-                                    <td><span class="status-badge critical">CRITICAL</span></td>
-                                    <td>2s ago</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
-
-            <!-- AI Analysis View -->
-            <div id="analysis" class="content-view">
-                <div class="analysis-grid">
-                    <section class="panel glass-panel">
-                        <h2 class="panel-title">PREDICTIVE FLOOD MODEL</h2>
-                        <div class="chart-placeholder">
-                            <div class="bar-chart-visual">
-                                <div class="bar" style="height: 40%"></div>
-                                <div class="bar" style="height: 60%"></div>
-                                <div class="bar" style="height: 80%"></div>
-                                <div class="bar warning" style="height: 95%"></div>
-                                <div class="bar" style="height: 70%"></div>
-                            </div>
-                            <p class="chart-label">PROJECTED WATER LEVELS (NEXT 24H)</p>
-                        </div>
-                    </section>
-                    <section class="panel glass-panel">
-                        <h2 class="panel-title">STRUCTURAL INTEGRITY AI</h2>
-                        <div class="stat-list">
-                            <div class="stat-item">
-                                <span>BRIDGE ALPHA</span>
-                                <div class="progress-bar">
-                                    <div class="fill" style="width: 92%"></div>
-                                </div>
-                                <span class="val">92%</span>
-                            </div>
-                            <div class="stat-item">
-                                <span>DOWNTOWN SHELTER</span>
-                                <div class="progress-bar">
-                                    <div class="fill warning" style="width: 65%"></div>
-                                </div>
-                                <span class="val warning-text">65%</span>
-                            </div>
-                        </div>
-                    </section>
+                <div class="sensor-card">
+                  <div class="sensor-label">TEMPERATURE</div>
+                  <div class="sensor-value" id="val-temp">--°C</div>
+                  <div class="sensor-status status-normal">NORMAL</div>
                 </div>
-            </div>
-
-            <!-- Evacuation View -->
-            <div id="evacuation" class="content-view">
-                <section class="panel glass-panel full-height">
-                    <h2 class="panel-title"><span class="icon">🏃</span> EVACUATION ROUTES</h2>
-                    <div class="routes-list">
-                        <div class="route-card safe">
-                            <div class="route-header">
-                                <h3>ROUTE A-1 (HIGHWAY 9)</h3>
-                                <span class="badge success">CLEAR</span>
-                            </div>
-                            <p>ETA TO SAFE ZONE: 45 MIN</p>
-                            <p>CAPACITY: 85% AVAILABLE</p>
-                        </div>
-                        <div class="route-card danger">
-                            <div class="route-header">
-                                <h3>ROUTE B-4 (COASTAL RD)</h3>
-                                <span class="badge danger">BLOCKED</span>
-                            </div>
-                            <p>FLOODING REPORTED AT MILE 4</p>
-                            <p>USE ALTERNATE ROUTE C-2</p>
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <!-- Rescue View -->
-            <div id="rescue" class="content-view">
-                <section class="panel glass-panel full-height">
-                    <h2 class="panel-title"><span class="icon">🚁</span> ACTIVE UNITS</h2>
-                    <div class="unit-grid">
-                        <div class="unit-card">
-                            <div class="unit-icon">🚁</div>
-                            <div class="unit-info">
-                                <h3>AIR-1</h3>
-                                <p>STATUS: DEPLOYED</p>
-                                <p>LOCATION: SECTOR 4</p>
-                            </div>
-                        </div>
-                        <div class="unit-card">
-                            <div class="unit-icon">🚑</div>
-                            <div class="unit-info">
-                                <h3>GROUND-3</h3>
-                                <p>STATUS: EN ROUTE</p>
-                                <p>LOCATION: SECTOR 2</p>
-                            </div>
-                        </div>
-                        <div class="unit-card">
-                            <div class="unit-icon">🚤</div>
-                            <div class="unit-info">
-                                <h3>MARINE-2</h3>
-                                <p>STATUS: STANDBY</p>
-                                <p>LOCATION: DOCK A</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <div id="settings" class="content-view">
-                <div class="panel glass-panel settings-container">
-                    <h2>SYSTEM CONFIGURATION</h2>
-                    <div class="form-group">
-                        <label>SUPABASE URL</label>
-                        <input type="text" id="supabase-url" class="neon-input" value="https://xyz.supabase.co">
-                    </div>
-                    <div class="form-group">
-                        <label>SUPABASE KEY</label>
-                        <input type="password" id="supabase-key" class="neon-input" value="****************">
-                    </div>
-                    <div class="form-group">
-                        <label>REFRESH RATE (MS)</label>
-                        <input type="range" class="neon-range" min="1000" max="10000" value="3000">
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="auto-evac" checked>
-                        <label for="auto-evac">AUTO-TRIGGER EVAC ALERTS</label>
-                    </div>
-                    <button class="action-btn" onclick="alert('CONFIG SAVED')">SAVE CONFIG</button>
-                    <button class="action-btn danger-btn">SYSTEM RESET</button>
+                <div class="sensor-card">
+                  <div class="sensor-label">BATTERY</div>
+                  <div class="sensor-value" id="val-bat">--%</div>
+                  <div class="sensor-status status-normal">STABLE</div>
                 </div>
-            </div>
+              </div>
+            </section>
 
-        </main>
+            <!-- AI Risk Panel (Top Right) -->
+            <section class="panel glass-panel ai-panel">
+              <h2 class="panel-title">
+                <span class="icon">🤖</span> AI RISK ASSESSMENT
+              </h2>
+              <div class="ai-content">
+                <div class="risk-meter-container">
+                  <canvas id="riskMeter"></canvas>
+                  <div class="risk-overlay">
+                    <div class="risk-percentage" id="risk-score">68%</div>
+                    <div class="risk-label">PROBABILITY</div>
+                  </div>
+                </div>
+                <div class="ai-stats">
+                  <div class="stat-row">
+                    <span>CONFIDENCE:</span>
+                    <span class="highlight-blue">86%</span>
+                  </div>
+                  <div class="stat-row">
+                    <span>PREDICTED:</span>
+                    <span class="highlight-red">FLOOD SURGE</span>
+                  </div>
+                  <div class="stat-row">
+                    <span>ETA:</span>
+                    <span class="highlight-amber">04:30:00</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Interactive Map (Center Large) -->
+            <section class="panel glass-panel map-panel">
+              <div class="map-header">
+                <h2 class="panel-title">
+                  <span class="icon">🗺️</span> GEOSPATIAL INTELLIGENCE
+                </h2>
+                <div class="map-controls">
+                  <button class="map-btn active" data-layer="risk">
+                    RISK ZONES
+                  </button>
+                  <button class="map-btn" data-layer="resources">
+                    RESOURCES
+                  </button>
+                  <button class="map-btn" data-layer="evac">EVAC ROUTES</button>
+                </div>
+              </div>
+              <div id="main-map" class="map-container"></div>
+            </section>
+
+            <!-- Rescue Command (Bottom Left) -->
+            <section class="panel glass-panel rescue-panel">
+              <h2 class="panel-title">
+                <span class="icon">🚑</span> RESCUE OPS
+              </h2>
+              <div class="rescue-grid">
+                <div class="info-block">
+                  <span class="label">ACTIVE TEAMS</span>
+                  <span class="value big-value">12</span>
+                </div>
+                <div class="info-block">
+                  <span class="label">VICTIMS LOCATED</span>
+                  <span class="value big-value warning-text">143</span>
+                </div>
+                <div class="info-block full-width">
+                  <span class="label">STRUCTURAL INTEGRITY MAP</span>
+                  <div class="integrity-bar">
+                    <div class="bar-fill" style="width: 75%"></div>
+                  </div>
+                  <span class="sub-label">CITY SECTOR 4: 75% SAFE</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- Alert Feed (Right Column) -->
+            <section class="panel glass-panel alerts-panel">
+              <h2 class="panel-title">
+                <span class="icon">⚠️</span> ALERT FEED
+              </h2>
+              <div class="alerts-container" id="alert-feed">
+                <!-- Alerts will be injected here via JS -->
+                <div class="alert-item critical">
+                  <div class="alert-time">10:42:15</div>
+                  <div class="alert-msg">FLOOD SURGE DETECTED - SECTOR B</div>
+                </div>
+                <div class="alert-item warning">
+                  <div class="alert-time">10:40:02</div>
+                  <div class="alert-msg">SEISMIC ACTIVITY SPIKE - COASTAL</div>
+                </div>
+                <div class="alert-item info">
+                  <div class="alert-time">10:38:55</div>
+                  <div class="alert-msg">RESCUE TEAM ALPHA DEPLOYED</div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- Detailed Sensors View -->
+        <div id="sensors" class="content-view">
+          <section class="panel glass-panel full-height">
+            <div class="panel-header-actions">
+              <h2 class="panel-title">
+                <span class="icon">📡</span> SENSOR NETWORK STATUS
+              </h2>
+              <input
+                type="text"
+                class="neon-input"
+                placeholder="SEARCH NODE ID..."
+              />
+            </div>
+            <div class="table-responsive">
+              <table class="neon-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>LOCATION</th>
+                    <th>TYPE</th>
+                    <th>READING</th>
+                    <th>STATUS</th>
+                    <th>LAST PING</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="highlight-blue">NODE-01</span></td>
+                    <td>COAST NORTH</td>
+                    <td>WATER LEVEL</td>
+                    <td>4.2m</td>
+                    <td><span class="status-badge normal">NORMAL</span></td>
+                    <td>0s ago</td>
+                  </tr>
+                  <tr>
+                    <td><span class="highlight-blue">NODE-02</span></td>
+                    <td>CITY CENTER</td>
+                    <td>VIBRATION</td>
+                    <td>0.04g</td>
+                    <td><span class="status-badge normal">NORMAL</span></td>
+                    <td>1s ago</td>
+                  </tr>
+                  <tr>
+                    <td><span class="highlight-blue">NODE-03</span></td>
+                    <td>ZONE B</td>
+                    <td>WIND</td>
+                    <td>45km/h</td>
+                    <td><span class="status-badge warning">HIGH</span></td>
+                    <td>0s ago</td>
+                  </tr>
+                  <tr>
+                    <td><span class="highlight-blue">NODE-04</span></td>
+                    <td>EAST BAY</td>
+                    <td>WATER LEVEL</td>
+                    <td>5.1m</td>
+                    <td><span class="status-badge critical">CRITICAL</span></td>
+                    <td>2s ago</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- AI Analysis View -->
+        <div id="analysis" class="content-view">
+          <div class="analysis-grid">
+            <section class="panel glass-panel">
+              <h2 class="panel-title">PREDICTIVE FLOOD MODEL</h2>
+              <div class="chart-placeholder">
+                <div class="bar-chart-visual">
+                  <div class="bar" style="height: 40%"></div>
+                  <div class="bar" style="height: 60%"></div>
+                  <div class="bar" style="height: 80%"></div>
+                  <div class="bar warning" style="height: 95%"></div>
+                  <div class="bar" style="height: 70%"></div>
+                </div>
+                <p class="chart-label">PROJECTED WATER LEVELS (NEXT 24H)</p>
+              </div>
+            </section>
+            <section class="panel glass-panel">
+              <h2 class="panel-title">STRUCTURAL INTEGRITY AI</h2>
+              <div class="stat-list">
+                <div class="stat-item">
+                  <span>BRIDGE ALPHA</span>
+                  <div class="progress-bar">
+                    <div class="fill" style="width: 92%"></div>
+                  </div>
+                  <span class="val">92%</span>
+                </div>
+                <div class="stat-item">
+                  <span>DOWNTOWN SHELTER</span>
+                  <div class="progress-bar">
+                    <div class="fill warning" style="width: 65%"></div>
+                  </div>
+                  <span class="val warning-text">65%</span>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- Evacuation View -->
+        <div id="evacuation" class="content-view">
+          <section class="panel glass-panel full-height">
+            <h2 class="panel-title">
+              <span class="icon">🏃</span> EVACUATION ROUTES
+            </h2>
+            <div class="routes-list">
+              <div class="route-card safe">
+                <div class="route-header">
+                  <h3>ROUTE A-1 (HIGHWAY 9)</h3>
+                  <span class="badge success">CLEAR</span>
+                </div>
+                <p>ETA TO SAFE ZONE: 45 MIN</p>
+                <p>CAPACITY: 85% AVAILABLE</p>
+              </div>
+              <div class="route-card danger">
+                <div class="route-header">
+                  <h3>ROUTE B-4 (COASTAL RD)</h3>
+                  <span class="badge danger">BLOCKED</span>
+                </div>
+                <p>FLOODING REPORTED AT MILE 4</p>
+                <p>USE ALTERNATE ROUTE C-2</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Rescue View -->
+        <div id="rescue" class="content-view">
+          <section class="panel glass-panel full-height">
+            <h2 class="panel-title">
+              <span class="icon">🚁</span> ACTIVE UNITS
+            </h2>
+            <div class="unit-grid">
+              <div class="unit-card">
+                <div class="unit-icon">🚁</div>
+                <div class="unit-info">
+                  <h3>AIR-1</h3>
+                  <p>STATUS: DEPLOYED</p>
+                  <p>LOCATION: SECTOR 4</p>
+                </div>
+              </div>
+              <div class="unit-card">
+                <div class="unit-icon">🚑</div>
+                <div class="unit-info">
+                  <h3>GROUND-3</h3>
+                  <p>STATUS: EN ROUTE</p>
+                  <p>LOCATION: SECTOR 2</p>
+                </div>
+              </div>
+              <div class="unit-card">
+                <div class="unit-icon">🚤</div>
+                <div class="unit-info">
+                  <h3>MARINE-2</h3>
+                  <p>STATUS: STANDBY</p>
+                  <p>LOCATION: DOCK A</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div id="settings" class="content-view">
+          <div class="panel glass-panel settings-container">
+            <h2>SYSTEM CONFIGURATION</h2>
+            <div class="form-group">
+              <label>SUPABASE URL</label>
+              <input
+                type="text"
+                id="supabase-url"
+                class="neon-input"
+                value="https://xyz.supabase.co"
+              />
+            </div>
+            <div class="form-group">
+              <label>SUPABASE KEY</label>
+              <input
+                type="password"
+                id="supabase-key"
+                class="neon-input"
+                value="****************"
+              />
+            </div>
+            <div class="form-group">
+              <label>REFRESH RATE (MS)</label>
+              <input
+                type="range"
+                class="neon-range"
+                min="1000"
+                max="10000"
+                value="3000"
+              />
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" id="auto-evac" checked />
+              <label for="auto-evac">AUTO-TRIGGER EVAC ALERTS</label>
+            </div>
+            <button class="action-btn" onclick="alert('CONFIG SAVED')">
+              SAVE CONFIG
+            </button>
+            <button class="action-btn danger-btn">SYSTEM RESET</button>
+          </div>
+        </div>
+      </main>
     </div>
 
     <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
     <!-- Main App -->
     <script type="module" src="app.js"></script>
-</body>
+    <script type="module" src="main/alerts_feed.js"></script>
 
+  </body>
 </html>
