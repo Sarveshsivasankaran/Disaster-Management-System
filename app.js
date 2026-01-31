@@ -37,7 +37,11 @@ class SentinelDashboard {
 
         // 3. Simulations (Make it alive)
         this.startSensorSimulation();
+<<<<<<< HEAD
        // this.startRandomAlerts();
+=======
+        this.startRandomAlerts();
+>>>>>>> origin/main
 
         console.log("SENTINEL: Systems Online.");
     }
@@ -238,7 +242,11 @@ class SentinelDashboard {
                 status = `MAG ${mag}`;
                 statusClass = mag > 4.5 ? "status-warning" : "status-normal";
 
+<<<<<<< HEAD
                //s.injectAlert(`SEISMIC EVENT DETECTED: ${quake.properties.place} (M${mag})`, 'warning');
+=======
+                this.injectAlert(`SEISMIC EVENT DETECTED: ${quake.properties.place} (M${mag})`, 'warning');
+>>>>>>> origin/main
             }
 
             // Update UI
@@ -296,7 +304,11 @@ class SentinelDashboard {
 
                 // Notify Dashboard
                 const topStory = this.activeFloodNews[0];
+<<<<<<< HEAD
                // this.injectAlert(`NEWS ALERT: ${topStory.title}`, 'info');
+=======
+                this.injectAlert(`NEWS ALERT: ${topStory.title}`, 'info');
+>>>>>>> origin/main
 
                 // Update Risk Verification State
                 this.newsRiskVerification = true;
@@ -561,6 +573,7 @@ class SentinelDashboard {
         });
     }
 
+<<<<<<< HEAD
    // startRandomAlerts() {
      //   setInterval(() => {
      //       if (Math.random() > 0.7) {
@@ -577,6 +590,23 @@ class SentinelDashboard {
            // { msg: "RESCUE TEAM BETA CHECKING IN", type: "info" },
             //{ msg: "STRUCTURAL VIBRATION DETECTED", type: "critical" }
         //];
+=======
+    startRandomAlerts() {
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                this.injectRandomAlert();
+            }
+        }, 8000);
+    }
+
+    injectRandomAlert() {
+        const alerts = [
+            { msg: "WIND SPEED INCREASING - SECTOR 7", type: "warning" },
+            { msg: "SENSOR CONNECTION LOST - NODE 4", type: "warning" },
+            { msg: "RESCUE TEAM BETA CHECKING IN", type: "info" },
+            { msg: "STRUCTURAL VIBRATION DETECTED", type: "critical" }
+        ];
+>>>>>>> origin/main
 
         const alert = alerts[Math.floor(Math.random() * alerts.length)];
         const container = document.getElementById('alert-feed');
