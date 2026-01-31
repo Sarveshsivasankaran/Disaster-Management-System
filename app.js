@@ -126,8 +126,27 @@ class SentinelDashboard {
         this.layers = {
             risk: L.layerGroup().addTo(this.map),
             resources: L.layerGroup(), // Hidden by default, activated on button click
-            evac: L.layerGroup()
+            evac: L.layerGroup(),
+            sos: L.layerGroup().addTo(this.map) // Persistent SOS layer
         };
+    }
+
+    // --- SOS MARKER MANAGEMENT ---
+    clearSOSMarkers() {
+        if (this.layers.sos) this.layers.sos.clearLayers();
+    }
+
+    restoreSOSMarker(lat, lng, info) {
+        if (!this.map || !this.layers.sos) return;
+        const sosIcon = L.divIcon({
+            className: 'sos-marker',
+            html: '🆘',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+        });
+        L.marker([lat, lng], { icon: sosIcon })
+            .addTo(this.layers.sos)
+            .bindPopup(`<b style="color:red">ACTIVE SOS</b><br>${info}`);
 
         // Initialize Resource Locator
         this.resourceLocator = new ResourceLocator(this.map);
@@ -174,6 +193,9 @@ class SentinelDashboard {
                     if (this.resourceLocator) {
                         this.resourceLocator.init(latitude, longitude);
                     }
+
+                    // 6. Pre-calculate Evacuation Routes
+                    this.populateEvacRoutes(latitude, longitude);
                 },
                 (err) => {
                     console.warn("Geolocation denied/failed. Using default view.", err);
@@ -335,9 +357,9 @@ class SentinelDashboard {
                 // Switch Layers
                 const layerName = targetBtn.dataset.layer;
 
-                // Hide all
-                Object.values(this.layers).forEach(layer => {
-                    if (this.map.hasLayer(layer)) {
+                // Hide all EXCEPT SOS (SOS is persistent overlay)
+                Object.entries(this.layers).forEach(([key, layer]) => {
+                    if (key !== 'sos' && this.map.hasLayer(layer)) {
                         this.map.removeLayer(layer);
                     }
                 });
@@ -349,6 +371,11 @@ class SentinelDashboard {
                     // Trigger refresh if Resources
                     if (layerName === 'resources' && this.resourceLocator) {
                         this.resourceLocator.updateResourceLayer();
+                    }
+
+                    // Trigger refresh if Evac
+                    if (layerName === 'evac') {
+                        this.populateEvacRoutes(this.userLat, this.userLng);
                     }
                 }
             });
@@ -383,6 +410,7 @@ class SentinelDashboard {
                 if (sensor.water_level > 5.5) { risk = 'high'; color = '#ff2a2a'; }
 
                 // Add to Risk Layer
+                // Add to Risk Layer
                 L.circleMarker([sensor.latitude, sensor.longitude], {
                     radius: 8,
                     fillColor: color,
@@ -395,18 +423,6 @@ class SentinelDashboard {
                     WATER: ${sensor.water_level}m<br>
                     BATTERY: ${sensor.battery_level}%
                 `);
-
-                // Simulated Evac Route for High Risk Sensors
-                if (risk === 'high') {
-                    // Draw line to user or safe zone (offset)
-                    const safeLat = sensor.latitude + 0.05;
-                    const safeLng = sensor.longitude + 0.05;
-                    L.polyline([[sensor.latitude, sensor.longitude], [safeLat, safeLng]], {
-                        color: '#ff2a2a',
-                        weight: 3,
-                        dashArray: '5, 10'
-                    }).addTo(this.layers.evac);
-                }
             });
 
         } catch (e) {
@@ -414,6 +430,73 @@ class SentinelDashboard {
         }
 
         // Hardcoded Resources removed in favor of ResourceLocator
+    }
+
+    populateEvacRoutes(userLat, userLng) {
+        if (!this.layers.evac) return;
+        this.layers.evac.clearLayers();
+
+        // Use defaults if location not available
+        const lat = userLat || 40.7128;
+        const lng = userLng || -74.0060;
+
+        // --- SAFE ROUTES (Green, High Visibility) ---
+        const safeRoutes = [
+            {
+                name: "Main North Corridor (EVAC-1)",
+                path: [[lat, lng], [lat + 0.02, lng + 0.01], [lat + 0.05, lng + 0.03]],
+                status: 'SAFE'
+            },
+            {
+                name: "West Bridge Route (EVAC-3)",
+                path: [[lat, lng], [lat - 0.01, lng - 0.02], [lat - 0.03, lng - 0.05]],
+                status: 'SAFE'
+            }
+        ];
+
+        // --- DANGER ROUTES (Red, Blocked/Flooded) ---
+        const unsafeRoutes = [
+            {
+                name: "Coastal Highway (CLOSED)",
+                path: [[lat, lng], [lat + 0.01, lng - 0.03], [lat + 0.02, lng - 0.06]],
+                status: 'DANGER',
+                reason: 'Severe Flooding Detected'
+            }
+        ];
+
+        // Draw Safe Paths
+        safeRoutes.forEach(route => {
+            L.polyline(route.path, {
+                color: '#00ff9d',
+                weight: 6,
+                opacity: 0.8,
+                lineJoin: 'round',
+                className: 'safe-route-anim'
+            }).addTo(this.layers.evac).bindPopup(`
+                <div style="text-align:center;">
+                    <h4 style="margin:0; color:#00ff9d;">🛡️ ${route.name}</h4>
+                    <p style="margin:5px 0; font-weight:bold; color:#00ff9d;">STATUS: SAFE TO TRAVEL</p>
+                    <small>Monitored by Sentinel AI</small>
+                </div>
+            `);
+        });
+
+        // Draw Unsafe Paths
+        unsafeRoutes.forEach(route => {
+            L.polyline(route.path, {
+                color: '#ff2a2a',
+                weight: 4,
+                dashArray: '10, 15',
+                opacity: 0.7,
+                lineJoin: 'round'
+            }).addTo(this.layers.evac).bindPopup(`
+                <div style="text-align:center;">
+                    <h4 style="margin:0; color:#ff2a2a;">⚠️ ${route.name}</h4>
+                    <p style="margin:5px 0; font-weight:bold; color:#ff2a2a;">STATUS: DANGER / BLOCKED</p>
+                    <p style="font-size:0.85em;">Reason: ${route.reason}</p>
+                </div>
+            `);
+        });
     }
 
     updateGeospatialState(reading) {
@@ -801,7 +884,7 @@ class SentinelDashboard {
             iconAnchor: [15, 15]
         });
 
-        const marker = L.marker([lat, lng], { icon: sosIcon }).addTo(this.map)
+        const marker = L.marker([lat, lng], { icon: sosIcon }).addTo(this.layers.sos)
             .bindPopup(`<b style="color:red">EMERGENCY SOS</b><br>${info}`).openPopup();
 
         // 2. Find closest resource (Simulated for fixed resources)

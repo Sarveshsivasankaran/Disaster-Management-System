@@ -254,3 +254,15 @@ create table if not exists sos_alerts (
   status text default 'NEW',
   created_at timestamp with time zone default now()
 );
+
+-- Mobile Users Table
+CREATE TABLE IF NOT EXISTS mobile_users (
+  phone TEXT PRIMARY KEY,
+  name TEXT,
+  last_login TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+GRANT ALL ON mobile_users TO anon;
+GRANT ALL ON mobile_users TO authenticated;
+GRANT ALL ON mobile_users TO service_role;

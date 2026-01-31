@@ -31,6 +31,11 @@ function renderSOSAlerts(alerts) {
     const container = document.getElementById('sos-feed-container');
     container.innerHTML = '';
 
+    // Clear existing cues on map to sync with fresh list
+    if (window.sentinel && window.sentinel.clearSOSMarkers) {
+        window.sentinel.clearSOSMarkers();
+    }
+
     if (!alerts || alerts.length === 0) {
         container.innerHTML = '<div class="no-data">NO ACTIVE SOS ALERTS</div>';
         return;
@@ -40,6 +45,13 @@ function renderSOSAlerts(alerts) {
         const card = document.createElement('div');
         card.className = `sos-card ${alert.status.toLowerCase()}`;
         if (alert.status === 'NEW') card.classList.add('new');
+
+        // Restore Marker on Map if Accepted
+        if (alert.status === 'ACCEPTED' && window.sentinel && window.sentinel.restoreSOSMarker) {
+            // Escape description
+            const safeDesc = (alert.description || '').replace(/'/g, "\\'");
+            window.sentinel.restoreSOSMarker(alert.latitude, alert.longitude, safeDesc);
+        }
 
         // Try to get a better address if we only have coords
         let locationDisplay = alert.location_text || 'Unknown Location';
@@ -239,7 +251,10 @@ function showNotification(alertData) {
 document.addEventListener('DOMContentLoaded', () => {
     // Only run if we are on the admin page
     if (document.getElementById('sos-feed-container')) {
-        fetchSOSAlerts();
-        subscribeToSOS();
+        // Delay slightly to allow main app.js to init map
+        setTimeout(() => {
+            fetchSOSAlerts();
+            subscribeToSOS();
+        }, 1500);
     }
 });
