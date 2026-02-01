@@ -19,6 +19,21 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 def insert_news_alert(alert: dict):
     """
     Inserts a single alert record into Supabase alerts table
+    Checks for duplicates (by title) before inserting.
     """
-    response = supabase.table("alerts").insert(alert).execute()
-    return response
+    try:
+        # Check if exists
+        existing = supabase.table("alerts").select("id").eq("title", alert["title"]).execute()
+        
+        if existing.data and len(existing.data) > 0:
+            print(f"⚠️ Duplicate skipped: {alert['title'][:30]}...")
+            return None
+
+        # Insert
+        response = supabase.table("alerts").insert(alert).execute()
+        print(f"✅ Inserted: {alert['title'][:30]}...")
+        return response
+    
+    except Exception as e:
+        print(f"❌ Error inserting: {e}")
+        return None

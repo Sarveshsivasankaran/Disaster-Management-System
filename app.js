@@ -46,7 +46,7 @@ class SentinelDashboard {
 
         // 3. Simulations (Make it alive)
         this.startSensorSimulation();
-        this.startRandomAlerts();
+        // this.startRandomAlerts(); // Disabled to use real/fake news feed only
 
         console.log("SENTINEL: Systems Online.");
     }
@@ -438,71 +438,84 @@ class SentinelDashboard {
         // Hardcoded Resources removed in favor of ResourceLocator
     }
 
-    populateEvacRoutes(userLat, userLng) {
+    async populateEvacRoutes(userLat, userLng) {
         if (!this.layers.evac) return;
         this.layers.evac.clearLayers();
 
-        // Use defaults if location not available
-        const lat = userLat || 40.7128;
-        const lng = userLng || -74.0060;
+        const lat = userLat || 13.0827; // Default Chennai if null
+        const lng = userLng || 80.2707;
 
-        // --- SAFE ROUTES (Green, High Visibility) ---
-        const safeRoutes = [
-            {
-                name: "Main North Corridor (EVAC-1)",
-                path: [[lat, lng], [lat + 0.02, lng + 0.01], [lat + 0.05, lng + 0.03]],
-                status: 'SAFE'
-            },
-            {
-                name: "West Bridge Route (EVAC-3)",
-                path: [[lat, lng], [lat - 0.01, lng - 0.02], [lat - 0.03, lng - 0.05]],
-                status: 'SAFE'
-            }
+        this.map.setView([lat, lng], 13);
+
+        // 1. Simulate/Fetch Hazard Zones (e.g. earlier flood data)
+        const hazards = [
+            { lat: lat + 0.005, lng: lng + 0.005, radius: 800, name: "DAM DISCHARGE ZONE" },
+            { lat: lat - 0.01, lng: lng - 0.005, radius: 1000, name: "LOW LYING FLOOD AREA" }
         ];
 
-        // --- DANGER ROUTES (Red, Blocked/Flooded) ---
-        const unsafeRoutes = [
-            {
-                name: "Coastal Highway (CLOSED)",
-                path: [[lat, lng], [lat + 0.01, lng - 0.03], [lat + 0.02, lng - 0.06]],
-                status: 'DANGER',
-                reason: 'Severe Flooding Detected'
-            }
-        ];
-
-        // Draw Safe Paths
-        safeRoutes.forEach(route => {
-            L.polyline(route.path, {
-                color: '#00ff9d',
-                weight: 6,
-                opacity: 0.8,
-                lineJoin: 'round',
-                className: 'safe-route-anim'
-            }).addTo(this.layers.evac).bindPopup(`
-                <div style="text-align:center;">
-                    <h4 style="margin:0; color:#00ff9d;">🛡️ ${route.name}</h4>
-                    <p style="margin:5px 0; font-weight:bold; color:#00ff9d;">STATUS: SAFE TO TRAVEL</p>
-                    <small>Monitored by Sentinel AI</small>
-                </div>
-            `);
-        });
-
-        // Draw Unsafe Paths
-        unsafeRoutes.forEach(route => {
-            L.polyline(route.path, {
+        // Draw Hazards
+        hazards.forEach(h => {
+            L.circle([h.lat, h.lng], {
                 color: '#ff2a2a',
-                weight: 4,
-                dashArray: '10, 15',
-                opacity: 0.7,
-                lineJoin: 'round'
-            }).addTo(this.layers.evac).bindPopup(`
-                <div style="text-align:center;">
-                    <h4 style="margin:0; color:#ff2a2a;">⚠️ ${route.name}</h4>
-                    <p style="margin:5px 0; font-weight:bold; color:#ff2a2a;">STATUS: DANGER / BLOCKED</p>
-                    <p style="font-size:0.85em;">Reason: ${route.reason}</p>
-                </div>
-            `);
+                fillColor: '#ff2a2a',
+                fillOpacity: 0.3,
+                radius: h.radius,
+                className: 'pulse-danger'
+            }).addTo(this.layers.evac)
+                .bindPopup(`<b>⛔ ${h.name}</b><br>History: Severe Flooding Detected`);
         });
+
+        // 2. Identify Safe Shelters (away from hazards)
+        const safeDest = { lat: lat + 0.02, lng: lng - 0.02, name: "GOVT HIGH SCHOOL SHELTER (SAFE)" };
+
+        L.marker([safeDest.lat, safeDest.lng], {
+            icon: L.divIcon({ className: 'safe-marker', html: '🏥', iconSize: [30, 30] })
+        }).addTo(this.layers.evac).bindPopup("<b>SAFE ZONE</b><br>Elevation: +15m");
+
+        // 3. Generate "Dangerous" Path (Direct) for comparison
+        // We simulate a bad route going through hazard to show AI reasoning
+        const badPath = [[lat, lng], [hazards[0].lat, hazards[0].lng], [safeDest.lat, safeDest.lng]];
+        L.polyline(badPath, {
+            color: '#ff2a2a',
+            weight: 3,
+            dashArray: '5, 10',
+            opacity: 0.6
+        }).addTo(this.layers.evac).bindPopup("<b>❌ REJECTED PATH</b><br>Reason: Intersects Flood Zone");
+
+        // 4. Generate "AI SAFE" Path (OSRM)
+        // We'll use a waypoint that skirts the hazard
+        const avoidLat = lat + 0.015;
+        const avoidLng = lng + 0.005; // Go around
+
+        try {
+            // Using OSRM with intermediate waypoint to force avoidance
+            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${lng},${lat};${avoidLng},${avoidLat};${safeDest.lng},${safeDest.lat}?overview=full&geometries=geojson`;
+            const resp = await fetch(osrmUrl);
+            const data = await resp.json();
+
+            if (data.routes && data.routes.length > 0) {
+                L.geoJSON(data.routes[0].geometry, {
+                    style: {
+                        color: '#00ff9d',
+                        weight: 6,
+                        className: 'safe-route-anim'
+                    }
+                }).addTo(this.layers.evac).bindPopup(`
+                    <div style="text-align:center; color:#00ff9d; background:rgba(0,0,0,0.8); padding:5px; border:1px solid #00ff9d;">
+                        <b>✅ AI OPTIMIZED SAFE ROUTE</b><br>
+                        Avoids: Dam Discharge & Flood Zones<br>
+                        Distance: ${(data.routes[0].distance / 1000).toFixed(1)}km
+                    </div>
+                `).openPopup();
+            }
+
+        } catch (e) {
+            console.log("OSRM Fail", e);
+            // Fallback
+            L.polyline([[lat, lng], [avoidLat, avoidLng], [safeDest.lat, safeDest.lng]], { color: '#00ff9d' }).addTo(this.layers.evac);
+        }
+
+        this.injectAlert("AI ANALYSIS COMPLETE: 2 HAZARDS DETECTED. SAFE ROUTE PLOTTED.", "info");
     }
 
     updateGeospatialState(reading) {
@@ -983,7 +996,7 @@ class SentinelDashboard {
         if (container.children.length > 20) container.removeChild(container.lastChild);
     }
 
-    deployRescueToLocation(lat, lng, info) {
+    async deployRescueToLocation(lat, lng, info) {
         if (!this.map) return;
 
         console.log(`DEPLOYING RESCUE TO: ${lat}, ${lng}`);
@@ -996,21 +1009,59 @@ class SentinelDashboard {
             iconAnchor: [15, 15]
         });
 
-        const marker = L.marker([lat, lng], { icon: sosIcon }).addTo(this.layers.sos)
+        L.marker([lat, lng], { icon: sosIcon }).addTo(this.layers.sos)
             .bindPopup(`<b style="color:red">EMERGENCY SOS</b><br>${info}`).openPopup();
 
-        // 2. Find closest resource (Simulated for fixed resources)
-        // In a real app, calculate distance to this.layers.resources children
-        const baseLat = 40.7300;
-        const baseLng = -74.0100;
+        // 2. Find closest Helper Base (Mock for now, normally would query database)
+        // Assume Base is User Location or a Fixed Safe Zone
+        const baseLat = this.userLat || 40.7128;
+        const baseLng = this.userLng || -74.0060;
 
-        // 3. Draw Route Line
-        const routeLine = L.polyline([[baseLat, baseLng], [lat, lng]], {
-            color: '#ff2a2a',
-            weight: 4,
-            dashArray: '10, 10',
-            className: 'rescue-route-anim'
-        }).addTo(this.map);
+        // 3. AI Route Calculation (OSRM - Open Source Routing Machine)
+        try {
+            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${baseLng},${baseLat};${lng},${lat}?overview=full&geometries=geojson`;
+            const resp = await fetch(osrmUrl);
+            const data = await resp.json();
+
+            if (data.routes && data.routes.length > 0) {
+                const routeGeoJSON = data.routes[0].geometry;
+
+                // Draw AI Optimized Route
+                const routeLayer = L.geoJSON(routeGeoJSON, {
+                    style: {
+                        color: '#00ff9d',
+                        weight: 5,
+                        opacity: 0.8,
+                        dashArray: '10, 10',
+                        className: 'safe-route-anim' // Pulse animation
+                    }
+                }).addTo(this.layers.evac); // Use Evac layer so it persists nicely
+
+                // Add Popup to Route
+                const distance = (data.routes[0].distance / 1000).toFixed(1);
+                const duration = (data.routes[0].duration / 60).toFixed(0);
+
+                routeLayer.bindTooltip(`
+                    <div style="text-align:center; color:#00ff9d; background:rgba(0,0,0,0.8); padding:5px; border:1px solid #00ff9d;">
+                        <b>AI OPTIMIZED RESCUE PATH</b><br>
+                        Dist: ${distance} km | ETA: ${duration} min
+                    </div>
+                `, { permanent: true, direction: "center" }).openTooltip();
+
+            } else {
+                // Fallback: Straight line
+                throw new Error("No route found");
+            }
+
+        } catch (e) {
+            console.warn("Routing API failed, using direct line fallback", e);
+            // Fallback Linear Path
+            L.polyline([[baseLat, baseLng], [lat, lng]], {
+                color: '#ffaa00',
+                weight: 4,
+                dashArray: '10, 10'
+            }).addTo(this.map).bindPopup("Direct Air Path (Navigation Offline)");
+        }
 
         // 4. Send Alert
         this.injectAlert(`RESCUE UNIT DEPLOYED TO SOS: ${info}`, 'critical');
@@ -1018,17 +1069,31 @@ class SentinelDashboard {
         // 5. Update Rescue Panel Numbers (Active Teams)
         const activeUnitsEl = document.getElementById('val-active-teams');
         if (activeUnitsEl) {
-            let current = parseInt(activeUnitsEl.textContent) || 0;
-            activeUnitsEl.textContent = current + 1;
-        }
+            // 5. Update Rescue Panel Numbers (Active Teams)
+            const activeUnitsEl = document.getElementById('val-active-teams');
+            if (activeUnitsEl) {
+                let current = parseInt(activeUnitsEl.textContent) || 0;
+                activeUnitsEl.textContent = current + 1;
+            }
 
-        // 6. Add Visual Rescue Unit Card to Rescue Section
-        const rescueGrid = document.getElementById('rescue-unit-grid');
-        if (rescueGrid) {
-            const unitId = Math.floor(Math.random() * 900) + 100;
-            const div = document.createElement('div');
-            div.className = 'unit-card';
-            div.innerHTML = `
+            // 6. Force Show Evacuation Routes Layer (So user sees the path)
+            if (!this.map.hasLayer(this.layers.evac)) {
+                this.map.addLayer(this.layers.evac);
+                // Highlight the button
+                const btn = document.querySelector('[data-layer="evac"]');
+                if (btn) {
+                    document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                }
+            }
+
+            // 7. Add Visual Rescue Unit Card to Rescue Section (Restored)
+            const rescueGrid = document.getElementById('rescue-unit-grid');
+            if (rescueGrid) {
+                const unitId = Math.floor(Math.random() * 900) + 100;
+                const div = document.createElement('div');
+                div.className = 'unit-card';
+                div.innerHTML = `
                 <div class="unit-icon">🚁</div>
                 <div class="unit-info">
                     <h3>RAPID-RESP-${unitId}</h3>
@@ -1036,18 +1101,15 @@ class SentinelDashboard {
                     <p>DESTIN: ${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
                 </div>
              `;
-            // Add to top
-            rescueGrid.insertBefore(div, rescueGrid.firstChild);
+                // Add to top and remove mock if empty
+                if (rescueGrid.innerHTML.includes('NO ACTIVE')) rescueGrid.innerHTML = '';
+                rescueGrid.insertBefore(div, rescueGrid.firstChild);
+            }
+
+            // 8. Auto Switch to Map View & Zoom
+            this.map.flyTo([lat, lng], 13);
         }
 
-        // Auto Switch to Map View if not already
-        // document.querySelector('[data-section="dashboard"]').click();
-        this.map.flyTo([lat, lng], 14);
-
-        // cleanup after some time?
-        setTimeout(() => {
-            this.map.removeLayer(routeLine);
-        }, 30000);
     }
 }
 
