@@ -33,6 +33,7 @@ class SentinelDashboard {
 
         // 1. Core UI Setup
         this.setupNavigation();
+        this.setupLocationSelector();
         this.startRealTimeClock();
         this.setupMapControls();
 
@@ -86,6 +87,48 @@ class SentinelDashboard {
         }
     }
 
+    setupLocationSelector() {
+        const selector = document.getElementById('location-select');
+        if (selector) {
+            selector.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if (!this.map) return;
+
+                console.log(`SENTINEL: Switching Sector to ${val}`);
+
+                // Dynamic Base Location (User Position > Map Center > Default Chennai)
+                let baseLat = this.userLat || this.map.getCenter().lat || 13.0827;
+                let baseLng = this.userLng || this.map.getCenter().lng || 80.2707;
+
+                // If map center is too far (e.g. user panned away), stick to detected userLat
+                if (this.userLat && this.userLng) {
+                    baseLat = this.userLat;
+                    baseLng = this.userLng;
+                }
+
+                // Sector Offsets (Relative to Base)
+                switch (val) {
+                    case 'city-central':
+                        // Centers exactly on the key area
+                        this.map.flyTo([baseLat, baseLng], 14);
+                        break;
+                    case 'coast-north':
+                        // Approx 15km North-East (Coastal/Port direction)
+                        this.map.flyTo([baseLat + 0.14, baseLng + 0.05], 13);
+                        break;
+                    case 'mountain-east':
+                        // Approx 12km South-West (Hills/Inland direction)
+                        this.map.flyTo([baseLat - 0.11, baseLng - 0.13], 13);
+                        break;
+                    case 'all':
+                    default:
+                        this.map.flyTo([baseLat, baseLng], 11);
+                        break;
+                }
+            });
+        }
+    }
+
     startRealTimeClock() {
         const timeDisplay = document.getElementById('server-time');
         if (!timeDisplay) return;
@@ -122,7 +165,7 @@ class SentinelDashboard {
         this.map = L.map('main-map', {
             zoomControl: false,
             attributionControl: false
-        }).setView([40.7128, -74.0060], 12);
+        }).setView([13.0827, 80.2707], 12); // Chennai, India
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 19
@@ -516,6 +559,31 @@ class SentinelDashboard {
         }
 
         this.injectAlert("AI ANALYSIS COMPLETE: 2 HAZARDS DETECTED. SAFE ROUTE PLOTTED.", "info");
+
+        // 5. Update Sidebar List
+        const routesList = document.querySelector('.routes-list');
+        if (routesList) {
+            routesList.innerHTML = `
+                <div class="route-card safe" onclick="window.sentinel.map.setView([${lat}, ${lng}], 13)">
+                    <div class="route-header">
+                        <h3>AI OPTIMIZED PATH (SAFE)</h3>
+                        <span class="badge success">RECOMMENDED</span>
+                    </div>
+                    <p>DESTINATION: GOVT HIGH SCHOOL SHELTER</p>
+                    <p style="font-size:0.85em; margin-top:5px;">✅ Avoids Dam Discharge Zone</p>
+                    <p style="font-size:0.85em;">✅ Elevation > 15m</p>
+                </div>
+                
+                <div class="route-card danger" style="opacity:0.7;">
+                     <div class="route-header">
+                        <h3>DIRECT ROUTE (HIGHWAY 4)</h3>
+                        <span class="badge danger">BLOCKED</span>
+                    </div>
+                    <p>STATUS: FLOODED / INTERSECTS HAZARD</p>
+                    <p style="font-size:0.85em; margin-top:5px;">⛔ Dam Discharge Risk</p>
+                </div>
+            `;
+        }
     }
 
     updateGeospatialState(reading) {
@@ -969,11 +1037,72 @@ class SentinelDashboard {
             if (confEl) confEl.textContent = confidence;
         }
 
-        // 4. Update Structural Integrity Metric
-        const fill = document.querySelector('.stat-item .fill');
-        const val = document.querySelector('.stat-item .val');
-        if (fill) fill.style.width = `${Math.max(0, 100 - riskScore)}%`;
-        if (val) val.textContent = `${Math.max(0, 100 - riskScore)}%`;
+        // 4. Update Structural Integrity Metric (AI Analysis)
+
+        // Formula: Bridge integrity drops with high water/waves proportional to stress limits
+        let bridgeHealth = 100 - (reading.water_level * 4) - (reading.wave_height * 6);
+        bridgeHealth = Math.min(100, Math.max(0, bridgeHealth)); // Clamp 0-100
+
+        // Formula: Shelter integrity is generally stable but affected by extreme risk scores
+        let shelterHealth = 100 - (riskScore * 0.2);
+        shelterHealth = Math.min(100, Math.max(0, shelterHealth));
+
+        // Update Bridge UI
+        const bridgeFill = document.getElementById('struct-bridge-fill');
+        const bridgeVal = document.getElementById('struct-bridge-val');
+        if (bridgeFill) {
+            bridgeFill.style.width = `${bridgeHealth.toFixed(0)}%`;
+            // Color coding
+            bridgeFill.className = 'fill'; // reset
+            if (bridgeHealth < 50) bridgeFill.classList.add('critical'); // red
+            else if (bridgeHealth < 80) bridgeFill.classList.add('warning'); // orange
+        }
+        if (bridgeVal) {
+            bridgeVal.textContent = `${bridgeHealth.toFixed(1)}%`;
+            bridgeVal.className = 'val';
+            if (bridgeHealth < 50) bridgeVal.classList.add('highlight-red');
+            else if (bridgeHealth < 80) bridgeVal.classList.add('highlight-amber');
+        }
+
+        // Update Shelter UI
+        const shelterFill = document.getElementById('struct-shelter-fill');
+        const shelterVal = document.getElementById('struct-shelter-val');
+        if (shelterFill) {
+            shelterFill.style.width = `${shelterHealth.toFixed(0)}%`;
+            // Color coding
+            shelterFill.className = 'fill';
+            if (shelterHealth < 60) shelterFill.classList.add('warning');
+        }
+        if (shelterVal) {
+            shelterVal.textContent = `${shelterHealth.toFixed(1)}%`;
+        }
+
+        // 5. Update Structural Integrity Map (City Sector)
+        const mapBar = document.getElementById('struct-map-bar');
+        const mapLabel = document.getElementById('struct-map-label');
+
+        // Calculate sector integrity based on vibration/seismic risk proxy (randomized slightly + water impact)
+        // Base 100, minus water damage risk
+        let sectorHealth = 100 - (reading.water_level * 5);
+        if (reading.water_level > 6.0) sectorHealth -= 15; // Penalty for extreme flood
+        sectorHealth = Math.min(100, Math.max(0, sectorHealth));
+
+        if (mapBar) {
+            mapBar.style.width = `${sectorHealth.toFixed(0)}%`;
+            if (sectorHealth < 50) mapBar.style.backgroundColor = '#ff2a2a'; // Critical
+            else if (sectorHealth < 80) mapBar.style.backgroundColor = '#ffaa00'; // Warning
+            else mapBar.style.backgroundColor = '#00f3ff'; // Normal
+        }
+
+        if (mapLabel) {
+            const statusText = sectorHealth > 80 ? "SAFE" : (sectorHealth > 50 ? "COMPROMISED" : "CRITICAL FAILURE");
+            mapLabel.textContent = `CITY SECTOR 4: ${sectorHealth.toFixed(0)}% ${statusText}`;
+
+            // Color the label too
+            if (sectorHealth < 50) mapLabel.style.color = '#ff2a2a';
+            else if (sectorHealth < 80) mapLabel.style.color = '#ffaa00';
+            else mapLabel.style.color = '#fff';
+        }
     }
 
     simulateMissingSensors() {
