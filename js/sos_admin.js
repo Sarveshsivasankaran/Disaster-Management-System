@@ -41,7 +41,13 @@ function renderSOSAlerts(alerts) {
         return;
     }
 
+    let acceptedCount = 0;
+
     alerts.forEach(alert => {
+        if (alert.status === 'ACCEPTED') {
+            acceptedCount++;
+        }
+
         const card = document.createElement('div');
         card.className = `sos-card ${alert.status.toLowerCase()}`;
         if (alert.status === 'NEW') card.classList.add('new');
@@ -63,7 +69,7 @@ function renderSOSAlerts(alerts) {
         // Card Content (No buttons here)
         card.innerHTML = `
             <div class="sos-header">
-                <span class="sos-time">${new Date(alert.created_at).toLocaleTimeString()}</span>
+                <span class="sos-time">${getDisplayTime(alert)}</span>
                 <span class="sos-status badge ${getStatusBadgeClass(alert.status)}">${alert.status}</span>
             </div>
             <div class="sos-body">
@@ -78,6 +84,48 @@ function renderSOSAlerts(alerts) {
 
         container.appendChild(card);
     });
+
+    // Update Victims Located Count (Accepted SOS)
+    const victimsVal = document.getElementById('val-victims-located');
+    if (victimsVal) {
+        victimsVal.textContent = acceptedCount;
+    }
+
+    // Update Active Teams Count
+    const teamsVal = document.getElementById('val-active-teams');
+    if (teamsVal) {
+        teamsVal.textContent = acceptedCount;
+    }
+
+    // Update Rescue Units Grid (Sync with Accepted SOS)
+    const rescueGrid = document.getElementById('rescue-unit-grid');
+    if (rescueGrid) {
+        rescueGrid.innerHTML = ''; // Clear mock/old data
+
+        if (acceptedCount === 0) {
+            rescueGrid.innerHTML = '<div style="padding:20px; color:#aaa; text-align:center; width:100%;">NO ACTIVE RESCUE MISSIONS</div>';
+        } else {
+            alerts.forEach(alert => {
+                if (alert.status === 'ACCEPTED') {
+                    // Generate Unit ID from Alert ID segment or random
+                    const unitId = alert.id.split('-')[0].toUpperCase();
+
+                    const div = document.createElement('div');
+                    div.className = 'unit-card';
+                    div.innerHTML = `
+                        <div class="unit-icon">🚁</div>
+                        <div class="unit-info">
+                            <h3>RAPID-RESP-${unitId}</h3>
+                            <p>STATUS: <span style="color:#00ff9d; font-weight:bold;">DEPLOYED</span></p>
+                            <p>DESTIN: ${alert.latitude.toFixed(4)}, ${alert.longitude.toFixed(4)}</p>
+                            <p style="font-size:0.7em; margin-top:4px; opacity:0.7;">MSN: ${alert.id.substring(0, 8)}...</p>
+                        </div>
+                    `;
+                    rescueGrid.appendChild(div);
+                }
+            });
+        }
+    }
 }
 
 // --- MODAL LOGIC ---
@@ -93,7 +141,7 @@ function openSOSModal(alertItem) {
     body.innerHTML = `
         <div class="sos-modal-detail-row">
             <span class="sos-modal-label">REPORTED TIME</span>
-            <span class="sos-modal-value">${new Date(alertItem.created_at).toLocaleString()}</span>
+            <span class="sos-modal-value">${getDisplayTime(alertItem)}</span>
         </div>
         <div class="sos-modal-detail-row">
             <span class="sos-modal-label">CONTACT INFO</span>
@@ -215,6 +263,24 @@ async function updateSOSStatus(id, newStatus, lat = 0, lng = 0, desc = '') {
     }
 }
 
+// Helper to get best available time
+function getDisplayTime(alert) {
+    if (alert.date && alert.time) {
+        return `${alert.date} ${alert.time}`;
+    }
+    return formatSOSTime(alert.created_at);
+}
+
+// Helper for safe time formatting (Fallback)
+function formatSOSTime(timestamp) {
+    if (!timestamp) return 'Time Unavailable';
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime()) || date.getFullYear() === 1970) {
+        return 'Time Unavailable';
+    }
+    return date.toLocaleString('en-IN');
+}
+
 // Realtime Subscription
 function subscribeToSOS() {
     window.supabaseClient
@@ -235,7 +301,7 @@ function showNotification(alertData) {
     const msg = document.getElementById('popup-msg');
 
     if (popup && msg) {
-        msg.innerHTML = `<strong>NEW SOS:</strong> ${alertData.description.substring(0, 30)}...`;
+        msg.innerHTML = `<strong>NEW SOS (${getDisplayTime(alertData)}):</strong> ${alertData.description ? alertData.description.substring(0, 30) : 'Emergency'}...`;
         popup.classList.add('visible');
 
         // Play sound if possible?

@@ -181,11 +181,11 @@
                         <div class="rescue-grid">
                             <div class="info-block">
                                 <span class="label">ACTIVE TEAMS</span>
-                                <span class="value big-value">12</span>
+                                <span class="value big-value" id="val-active-teams">12</span>
                             </div>
                             <div class="info-block">
                                 <span class="label">VICTIMS LOCATED</span>
-                                <span class="value big-value warning-text">143</span>
+                                <span class="value big-value warning-text" id="val-victims-located">143</span>
                             </div>
                             <div class="info-block full-width">
                                 <span class="label">STRUCTURAL INTEGRITY MAP</span>
@@ -202,21 +202,8 @@
                         <h2 class="panel-title"><span class="icon">⚠️</span> ALERT FEED</h2>
                         <div class="alerts-container" id="alert-feed">
                             <!-- Alerts will be injected here via JS -->
-                            <div class="alert-item critical">
-                                <div class="alert-time">10:42:15</div>
-                                <div class="alert-msg">FLOOD SURGE DETECTED - SECTOR B</div>
-                            </div>
-                            <div class="alert-item warning">
-                                <div class="alert-time">10:40:02</div>
-                                <div class="alert-msg">SEISMIC ACTIVITY SPIKE - COASTAL</div>
-                            </div>
-                            <div class="alert-item info">
-                                <div class="alert-time">10:38:55</div>
-                                <div class="alert-msg">RESCUE TEAM ALPHA DEPLOYED</div>
-                            </div>
                         </div>
                     </section>
-
                 </div>
             </div>
 
@@ -345,7 +332,7 @@
             <div id="rescue" class="content-view">
                 <section class="panel glass-panel full-height">
                     <h2 class="panel-title"><span class="icon">🚁</span> ACTIVE UNITS</h2>
-                    <div class="unit-grid">
+                    <div class="unit-grid" id="rescue-unit-grid">
                         <div class="unit-card">
                             <div class="unit-icon">🚁</div>
                             <div class="unit-info">
@@ -427,6 +414,25 @@
             </div>
             <div id="sos-modal-actions" class="custom-modal-actions">
                 <!-- Actions Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Sensor Details Modal -->
+    <div id="sensor-details-modal" class="custom-modal-overlay">
+        <div class="custom-modal-content glass-panel" style="max-width: 800px;">
+            <div class="custom-modal-header">
+                <h2 id="sensor-modal-title">📡 SENSOR ANALYTICS</h2>
+                <button class="close-modal-btn" onclick="closeSensorModal()">✖</button>
+            </div>
+            <div class="custom-modal-body">
+                <div class="sensor-stats-row" id="sensor-modal-stats"
+                    style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                    <!-- Quick Stats Injected Here -->
+                </div>
+                <div style="height: 300px; width: 100%;">
+                    <canvas id="sensorHistoryChart"></canvas>
+                </div>
             </div>
         </div>
     </div>

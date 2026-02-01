@@ -133,6 +133,10 @@ class _SOSViewState extends State<SOSView> {
       final position = await Geolocator.getCurrentPosition();
 
       // 3. Send to Supabase
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}";
+
       await Supabase.instance.client.from('sos_alerts').insert({
         'name': UserProfile.name,
         'phone': UserProfile.phone,
@@ -141,6 +145,8 @@ class _SOSViewState extends State<SOSView> {
         'longitude': position.longitude,
         'location_text': "Mobile GPS: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}",
         'status': 'NEW',
+        'date': dateStr,
+        'time': timeStr,
       });
 
       if (mounted) _showSuccessDialog();

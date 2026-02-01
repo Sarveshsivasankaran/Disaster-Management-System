@@ -18,6 +18,12 @@ class SentinelDashboard {
         this.init();
     }
 
+    // Modal Controls
+    closeSensorModal() {
+        const modal = document.getElementById('sensor-details-modal');
+        if (modal) modal.classList.remove('open');
+    }
+
     // ... (init and setups remain)
 
 
@@ -743,7 +749,113 @@ class SentinelDashboard {
                 <td><span class="status-badge ${statusClass}">${status}</span></td>
                 <td>${timeStr}</td>
             `;
+            tr.style.cursor = 'pointer';
+            tr.onclick = () => this.openSensorModal(row.id);
             tbody.appendChild(tr);
+        });
+    }
+
+    async openSensorModal(sensorId) {
+        const modal = document.getElementById('sensor-details-modal');
+        const title = document.getElementById('sensor-modal-title');
+        const statsRow = document.getElementById('sensor-modal-stats');
+
+        if (!modal) return;
+
+        // Show Modal immediately
+        modal.classList.add('open');
+        if (title) title.textContent = `ANALYSIS: ${sensorId}`;
+        if (statsRow) statsRow.innerHTML = 'Loading Data...';
+
+        try {
+            // Fetch History for this specific sensor
+            const { data, error } = await this.supabase
+                .from('buoys')
+                .select('*')
+                .eq('id', sensorId)
+                .order('created_at', { ascending: true }) // Chronological for graph
+                .limit(50);
+
+            if (data && data.length > 0) {
+                const latest = data[data.length - 1];
+
+                // Populate Stats
+                if (statsRow) {
+                    statsRow.innerHTML = `
+                        <div class="stat-item"><span>WATER LEVEL</span><span class="val highlight-blue">${latest.water_level}m</span></div>
+                        <div class="stat-item"><span>WAVE HEIGHT</span><span class="val highlight-blue">${latest.wave_height}m</span></div>
+                        <div class="stat-item"><span>TEMP</span><span class="val highlight-blue">${latest.temperature}°C</span></div>
+                        <div class="stat-item"><span>BATTERY</span><span class="val highlight-green">${latest.battery_level}%</span></div>
+                    `;
+                }
+
+                // Render Chart
+                this.renderSensorChart(data);
+            } else {
+                if (statsRow) statsRow.innerHTML = 'No Data Available';
+            }
+
+        } catch (e) {
+            console.error("Error fetching sensor details:", e);
+        }
+    }
+
+    renderSensorChart(data) {
+        const ctx = document.getElementById('sensorHistoryChart');
+        if (!ctx) return;
+
+        // Destroy old chart if exists
+        if (this.sensorChart) {
+            this.sensorChart.destroy();
+        }
+
+        const labels = data.map(d => new Date(d.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        const waterLevels = data.map(d => d.water_level);
+        const waveHeights = data.map(d => d.wave_height);
+
+        this.sensorChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Water Level (m)',
+                        data: waterLevels,
+                        borderColor: '#00f3ff',
+                        backgroundColor: 'rgba(0, 243, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Wave Height (m)',
+                        data: waveHeights,
+                        borderColor: '#ffaa00',
+                        backgroundColor: 'rgba(255, 170, 0, 0.05)',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#fff' } }
+                },
+                scales: {
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#aaa' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#aaa' }
+                    }
+                }
+            }
         });
     }
 
@@ -903,11 +1015,29 @@ class SentinelDashboard {
         // 4. Send Alert
         this.injectAlert(`RESCUE UNIT DEPLOYED TO SOS: ${info}`, 'critical');
 
-        // 5. Update Rescue Panel Numbers
-        const activeUnitsEl = document.querySelector('.rescue-panel .big-value');
+        // 5. Update Rescue Panel Numbers (Active Teams)
+        const activeUnitsEl = document.getElementById('val-active-teams');
         if (activeUnitsEl) {
             let current = parseInt(activeUnitsEl.textContent) || 0;
             activeUnitsEl.textContent = current + 1;
+        }
+
+        // 6. Add Visual Rescue Unit Card to Rescue Section
+        const rescueGrid = document.getElementById('rescue-unit-grid');
+        if (rescueGrid) {
+            const unitId = Math.floor(Math.random() * 900) + 100;
+            const div = document.createElement('div');
+            div.className = 'unit-card';
+            div.innerHTML = `
+                <div class="unit-icon">🚁</div>
+                <div class="unit-info">
+                    <h3>RAPID-RESP-${unitId}</h3>
+                    <p>STATUS: <span style="color:#00ff9d; font-weight:bold;">DEPLOYED</span></p>
+                    <p>DESTIN: ${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
+                </div>
+             `;
+            // Add to top
+            rescueGrid.insertBefore(div, rescueGrid.firstChild);
         }
 
         // Auto Switch to Map View if not already
@@ -924,4 +1054,7 @@ class SentinelDashboard {
 // Initialize on Load
 document.addEventListener('DOMContentLoaded', () => {
     window.sentinel = new SentinelDashboard();
+
+    // Bind global close function
+    window.closeSensorModal = () => window.sentinel.closeSensorModal();
 });
