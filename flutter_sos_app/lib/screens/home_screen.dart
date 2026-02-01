@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../user_profile.dart';
 import 'map_screen.dart';
+import 'social_feed_screen.dart';
 import '../main.dart'; // To access the global notification plugin
 
 class HomeScreen extends StatefulWidget {
@@ -82,29 +83,239 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF050b14),
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [
-          SOSView(),
-          MapScreen(),
+        children: [
+          DashboardView(onTabChange: (i) => setState(() => _selectedIndex = i)),     // New Command Center UI
+          const SocialFeedScreen(),  // Social Media News
+          const MapScreen(),         // Resources & Routes
+          const SOSView(),           // Dedicated SOS/Report Page
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        backgroundColor: const Color(0xFF050b14),
+        backgroundColor: const Color(0xFF0f172a),
         selectedItemColor: const Color(0xFF00ff9d),
         unselectedItemColor: Colors.white24,
         type: BottomNavigationBarType.fixed,
+        showUnselectedLabels: true,
         onTap: (index) => setState(() => _selectedIndex = index),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.emergency_share, size: 28), label: "SOS"),
-          BottomNavigationBarItem(icon: Icon(Icons.map, size: 28), label: "MAPS"),
+          BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.newspaper_rounded), label: "Feed"),
+          BottomNavigationBarItem(icon: Icon(Icons.map_rounded), label: "Map"),
+          BottomNavigationBarItem(icon: Icon(Icons.emergency_share), label: "Report"),
         ],
       ),
     );
   }
 }
 
+// ============================================================================
+// DASHBOARD VIEW (COMMAND CENTER)
+// ============================================================================
+class DashboardView extends StatelessWidget {
+  final Function(int) onTabChange;
+  const DashboardView({super.key, required this.onTabChange});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // HEADER
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("COMMAND CENTER", style: TextStyle(color: Colors.white54, fontSize: 12, letterSpacing: 2)),
+                      const SizedBox(height: 4),
+                      Text("Sector: Central City", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  CircleAvatar(
+                     backgroundColor: Colors.white10,
+                     child: Icon(Icons.person, color: const Color(0xFF00ff9d)),
+                  )
+                ],
+              ),
+              const SizedBox(height: 30),
+
+              // LIVE ALERTS BANNER
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF00C9A7), Color(0xFF00ff9d)]),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFF00ff9d).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 5))
+                  ]
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("LIVE ALERTS", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 16)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.circle, color: Colors.red, size: 8),
+                              SizedBox(width: 4),
+                              Text("REAL-TIME", style: TextStyle(color: Colors.black54, fontSize: 10, fontWeight: FontWeight.bold))
+                            ],
+                          ),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 15),
+                    const Text("Marine Safety Alerts", style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    const SizedBox(height: 5),
+                    const Text("High Swell Warning Issued for North Coast. Fishermen advised to return.", 
+                        style: TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              // ALERT CARDS ROW
+              SizedBox(
+                height: 160,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _buildAlertCard("HIGH SWELL", "CRITICAL", Colors.red, Icons.tsunami),
+                    const SizedBox(width: 15),
+                    _buildAlertCard("STRONG WIND", "WARNING", Colors.orange, Icons.air),
+                    const SizedBox(width: 15),
+                    _buildAlertCard("RAIN SURGE", "WATCH", Colors.blue, Icons.water_drop),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              // QUICK ACCESS
+              const Text("QUICK ACCESS", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onTabChange(2), // Switch to Map
+                      child: _buildQuickBtn("SHELTERS", Icons.home, Colors.blue)
+                    )
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onTabChange(3), // Switch to Report
+                      child: _buildQuickBtn("EMERGENCY", Icons.call, Colors.green)
+                    )
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
+
+              // REPORT BUTTON (LARGE)
+              Center(
+                child: GestureDetector(
+                  onTap: () => onTabChange(3),
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFff2a2a), Color(0xFFd90429)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight
+                      ),
+                      boxShadow: [
+                        BoxShadow(color: const Color(0xFFff2a2a).withOpacity(0.4), blurRadius: 30, spreadRadius: 5)
+                      ]
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.warning_rounded, color: Colors.white, size: 48),
+                        SizedBox(height: 8),
+                        Text("REPORT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlertCard(String title, String status, Color color, IconData icon) {
+    return Container(
+      width: 140,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0f172a),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10)
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Icon(icon, color: color, size: 32),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: color.withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
+                child: Text(status, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+              )
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickBtn(String label, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0f172a),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10)
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold))
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// SOS VIEW (Direct Report)
+// ============================================================================
 class SOSView extends StatefulWidget {
   const SOSView({super.key});
 
@@ -283,14 +494,6 @@ class _SOSViewState extends State<SOSView> {
               style: const TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1),
             ),
           ),
-          const SizedBox(height: 30),
-          IconButton(
-            onPressed: () async {
-              await UserProfile.logout();
-              if (mounted) Navigator.pushReplacementNamed(context, '/');
-            },
-            icon: const Icon(Icons.power_settings_new, color: Colors.white24),
-          )
         ],
       ),
     );
