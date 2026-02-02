@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../user_profile.dart';
@@ -63,20 +65,40 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Example of a real SMS API call (Dynamic)
+  // Twilio Integration for SMS OTP
   Future<bool> _sendSmsViaGateway(String phone, String code) async {
+    // TWILIO CREDENTIALS - PLEASE FILL THESE IN
+    const String accountSid = 'ACa7209437c9427fdbce3c43808c22eb43';
+    const String authToken =
+        'ee4d07c46e467f5063985046d3ae3b03'; // Provided Auth Token
+    const String twilioNumber =
+        '+16168670252'; // e.g., '+1234567890'
+
+    // Ensure phone is in E.164 format (starts with +)
+    String targetPhone = phone.startsWith('+') ? phone : '+$phone';
+
+    final url = Uri.parse(
+        'https://api.twilio.com/2010-04-01/Accounts/$accountSid/Messages.json');
+
     try {
-      // THIS IS A DYNAMIC SMS API INTEGRATION TEMPLATE
-      // You would normally use your API key and endpoint here
-      // For demonstration, we simulate success if the number is valid
-      // const String apiKey = "YOUR_SMS_API_KEY";
-      // const String apiEndpoint = "https://api.sms-provider.com/v1/send";
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization':
+              'Basic ' + base64Encode(utf8.encode('$accountSid:$authToken')),
+        },
+        body: {
+          'From': twilioNumber,
+          'To': targetPhone,
+          'Body': 'Your SENTINEL SOS verification code is: $code',
+        },
+      );
 
-      // Mocking the HTTP request for now
-      await Future.delayed(const Duration(seconds: 1));
-
-      return true; // Simulate successful request
+      debugPrint(
+          "Twilio HTTP Response: ${response.statusCode} - ${response.body}");
+      return response.statusCode == 201;
     } catch (e) {
+      debugPrint("Twilio API Connection Error: $e");
       return false;
     }
   }

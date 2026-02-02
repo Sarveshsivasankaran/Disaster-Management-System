@@ -18,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   Timer? _dangerCheckTimer;
+  final GlobalKey<MapScreenState> _mapScreenKey = GlobalKey<MapScreenState>();
 
   @override
   void initState() {
@@ -29,6 +30,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _dangerCheckTimer?.cancel();
     super.dispose();
+  }
+
+  void _changeTab(int index, [MapLayer? layer]) {
+    setState(() => _selectedIndex = index);
+    if (index == 2 && layer != null) {
+      // Small delay to ensure the stack has switched before calling the state
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _mapScreenKey.currentState?.setActiveLayer(layer);
+      });
+    }
   }
 
   void _startDangerCheck() {
@@ -89,10 +100,10 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _selectedIndex,
         children: [
           DashboardView(
-              onTabChange: (i) =>
-                  setState(() => _selectedIndex = i)), // New Command Center UI
+              onTabChange: (i, [layer]) =>
+                  _changeTab(i, layer)), // New Command Center UI
           const SocialFeedScreen(), // Social Media News
-          const MapScreen(), // Resources & Routes
+          MapScreen(key: _mapScreenKey), // Resources & Routes
           const SOSView(), // Dedicated SOS/Report Page
         ],
       ),
@@ -103,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedItemColor: Colors.white24,
         type: BottomNavigationBarType.fixed,
         showUnselectedLabels: true,
-        onTap: (index) => setState(() => _selectedIndex = index),
+        onTap: (index) => _changeTab(index),
         items: const [
           BottomNavigationBarItem(
               icon: Icon(Icons.grid_view_rounded), label: "Home"),
@@ -122,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
 // DASHBOARD VIEW (COMMAND CENTER)
 // ============================================================================
 class DashboardView extends StatefulWidget {
-  final Function(int) onTabChange;
+  final Function(int, [MapLayer?]) onTabChange;
   const DashboardView({super.key, required this.onTabChange});
 
   @override
@@ -300,15 +311,16 @@ class _DashboardViewState extends State<DashboardView> {
                 children: [
                   Expanded(
                       child: GestureDetector(
-                          onTap: () => widget.onTabChange(2),
+                          onTap: () =>
+                              widget.onTabChange(2, MapLayer.resources),
                           child: _buildSmallBtn(
                               "SHELTERS", Icons.home, Colors.blue))),
                   const SizedBox(width: 15),
                   Expanded(
                       child: GestureDetector(
-                          onTap: () => widget.onTabChange(3),
-                          child: _buildSmallBtn(
-                              "EMERGENCY", Icons.call, Colors.green))),
+                          onTap: () => widget.onTabChange(2, MapLayer.evac),
+                          child: _buildSmallBtn("EVAC PATH",
+                              Icons.directions_run, Colors.orange))),
                 ],
               ),
               const SizedBox(height: 30),

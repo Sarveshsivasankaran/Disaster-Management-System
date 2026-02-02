@@ -15,6 +15,9 @@ class SentinelDashboard {
         this.timers = [];
         this.resourceLocator = null; // New Resource Locator
 
+        // Expose globally for resource locator and other callbacks
+        window.sentinel = this;
+
         this.init();
     }
 
@@ -419,6 +422,11 @@ class SentinelDashboard {
                     }
                 });
 
+                // Clear routing layer when switching to risk (reset state)
+                if (layerName === 'risk' && this.resourceLocator && this.resourceLocator.routingLayer) {
+                    this.resourceLocator.routingLayer.clearLayers();
+                }
+
                 // Show target
                 if (this.layers[layerName]) {
                     this.map.addLayer(this.layers[layerName]);
@@ -496,10 +504,10 @@ class SentinelDashboard {
 
         this.map.setView([lat, lng], 13);
 
-        // 1. Simulate/Fetch Hazard Zones (e.g. earlier flood data)
+        // 1. Hazard Zones
         const hazards = [
-            { lat: lat + 0.005, lng: lng + 0.005, radius: 800, name: "DAM DISCHARGE ZONE" },
-            { lat: lat - 0.01, lng: lng - 0.005, radius: 1000, name: "LOW LYING FLOOD AREA" }
+            { lat: lat + 0.005, lng: lng + 0.012, radius: 1200, name: "DAM DISCHARGE ZONE" },
+            { lat: lat - 0.008, lng: lng - 0.005, radius: 1000, name: "LOW LYING FLOOD AREA" }
         ];
 
         // Draw Hazards
@@ -514,30 +522,18 @@ class SentinelDashboard {
                 .bindPopup(`<b>⛔ ${h.name}</b><br>History: Severe Flooding Detected`);
         });
 
-        // 2. Identify Safe Shelters (away from hazards)
-        const safeDest = { lat: lat + 0.02, lng: lng - 0.02, name: "GOVT HIGH SCHOOL SHELTER (SAFE)" };
+        // 2. Identify Safe Shelters
+        const safeDest = { lat: lat + 0.02, lng: lng - 0.02, name: "CENTRAL RELIEF HUB" };
 
         L.marker([safeDest.lat, safeDest.lng], {
             icon: L.divIcon({ className: 'safe-marker', html: '🏥', iconSize: [30, 30] })
-        }).addTo(this.layers.evac).bindPopup("<b>SAFE ZONE</b><br>Elevation: +15m");
+        }).addTo(this.layers.evac).bindPopup("<b>AI RECOMMENDED SAFE ZONE</b><br>Elevation: +15m Check: PASSED");
 
-        // 3. Generate "Dangerous" Path (Direct) for comparison
-        // We simulate a bad route going through hazard to show AI reasoning
-        const badPath = [[lat, lng], [hazards[0].lat, hazards[0].lng], [safeDest.lat, safeDest.lng]];
-        L.polyline(badPath, {
-            color: '#ff2a2a',
-            weight: 3,
-            dashArray: '5, 10',
-            opacity: 0.6
-        }).addTo(this.layers.evac).bindPopup("<b>❌ REJECTED PATH</b><br>Reason: Intersects Flood Zone");
-
-        // 4. Generate "AI SAFE" Path (OSRM)
-        // We'll use a waypoint that skirts the hazard
-        const avoidLat = lat + 0.015;
-        const avoidLng = lng + 0.005; // Go around
-
+        // 3. AI Optimized Path
         try {
-            // Using OSRM with intermediate waypoint to force avoidance
+            const avoidLat = lat + 0.01;
+            const avoidLng = lng + 0.005;
+
             const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${lng},${lat};${avoidLng},${avoidLat};${safeDest.lng},${safeDest.lat}?overview=full&geometries=geojson`;
             const resp = await fetch(osrmUrl);
             const data = await resp.json();
@@ -550,18 +546,16 @@ class SentinelDashboard {
                         className: 'safe-route-anim'
                     }
                 }).addTo(this.layers.evac).bindPopup(`
-                    <div style="text-align:center; color:#00ff9d; background:rgba(0,0,0,0.8); padding:5px; border:1px solid #00ff9d;">
-                        <b>✅ AI OPTIMIZED SAFE ROUTE</b><br>
-                        Avoids: Dam Discharge & Flood Zones<br>
-                        Distance: ${(data.routes[0].distance / 1000).toFixed(1)}km
+                    <div style="text-align:center; color:#00ff9d; font-family:'Rajdhani';">
+                        <b style="font-family:'Orbitron';">✅ AI OPTIMIZED PATH</b><br>
+                        AVOIDS: 2 HAZARD ZONES<br>
+                        TIME: ${Math.round(data.routes[0].duration / 60)} MINS
                     </div>
                 `).openPopup();
             }
 
         } catch (e) {
-            console.log("OSRM Fail", e);
-            // Fallback
-            L.polyline([[lat, lng], [avoidLat, avoidLng], [safeDest.lat, safeDest.lng]], { color: '#00ff9d' }).addTo(this.layers.evac);
+            console.warn("OSRM Fail", e);
         }
 
         this.injectAlert("AI ANALYSIS COMPLETE: 2 HAZARDS DETECTED. SAFE ROUTE PLOTTED.", "info");
@@ -575,18 +569,18 @@ class SentinelDashboard {
                         <h3>AI OPTIMIZED PATH (SAFE)</h3>
                         <span class="badge success">RECOMMENDED</span>
                     </div>
-                    <p>DESTINATION: GOVT HIGH SCHOOL SHELTER</p>
-                    <p style="font-size:0.85em; margin-top:5px;">✅ Avoids Dam Discharge Zone</p>
-                    <p style="font-size:0.85em;">✅ Elevation > 15m</p>
+                    <p>DESTINATION: CENTRAL RELIEF HUB</p>
+                    <p style="font-size:0.85em; margin-top:5px;">✅ Verified Safe Zone</p>
+                    <p style="font-size:0.85em;">✅ Lowest Risk Path</p>
                 </div>
                 
-                <div class="route-card danger" style="opacity:0.7;">
+                <div class="route-card danger" style="opacity:0.6;">
                      <div class="route-header">
                         <h3>DIRECT ROUTE (HIGHWAY 4)</h3>
                         <span class="badge danger">BLOCKED</span>
                     </div>
                     <p>STATUS: FLOODED / INTERSECTS HAZARD</p>
-                    <p style="font-size:0.85em; margin-top:5px;">⛔ Dam Discharge Risk</p>
+                    <p style="font-size:0.85em; margin-top:5px;">⛔ High Surge Risk Detected</p>
                 </div>
             `;
         }

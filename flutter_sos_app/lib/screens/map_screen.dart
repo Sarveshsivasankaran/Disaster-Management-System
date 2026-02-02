@@ -11,12 +11,12 @@ class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
   @override
-  State<MapScreen> createState() => _MapScreenState();
+  MapScreenState createState() => MapScreenState();
 }
 
 enum MapLayer { risk, resources, evac }
 
-class _MapScreenState extends State<MapScreen> {
+class MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   final SupabaseClient _supabase = Supabase.instance.client;
 
@@ -39,6 +39,8 @@ class _MapScreenState extends State<MapScreen> {
   List<Marker> _resourceMarkers = [];
   List<Polyline> _evacRoutes = [];
 
+  Map<String, dynamic>? _selectedResource;
+
   Map<String, dynamic>? _weatherInfo;
   Map<String, dynamic>? _seismicInfo;
 
@@ -48,14 +50,24 @@ class _MapScreenState extends State<MapScreen> {
     _initializeMapData();
   }
 
+  // Public method for HomeScreen to call
+  void setActiveLayer(MapLayer layer) {
+    setState(() {
+      _activeLayer = layer;
+    });
+  }
+
   Future<void> _initializeMapData() async {
     await _getCurrentLocation();
     _fetchSensors();
     _fetchSOSAlerts();
     _fetchWeather();
     _fetchSeismicData();
-    _fetchEvacRoutes();
-    _generateResources();
+    _fetchResources();
+    // Don't fetch evac routes until a resource is clicked or we are in evac mode
+    if (_activeLayer == MapLayer.evac && _evacRoutes.isEmpty) {
+      _fetchAutomaticEvacRoute();
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -219,14 +231,17 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  Future<void> _fetchEvacRoutes() async {
-    // Using OSRM API for real routes
-    final destLat = _userLocation.latitude + 0.02;
-    final destLng = _userLocation.longitude - 0.02;
+  Future<void> _fetchAutomaticEvacRoute() async {
+    if (_resourceMarkers.isEmpty) return;
+    // Route to the first (usually nearest) resource
+    final nearest = _resourceMarkers.first.point;
+    _fetchRouteTo(nearest);
+  }
 
+  Future<void> _fetchRouteTo(LatLng destination) async {
     try {
       final url =
-          'https://router.project-osrm.org/route/v1/driving/${_userLocation.longitude},${_userLocation.latitude};$destLng,$destLat?overview=full&geometries=geojson';
+          'https://router.project-osrm.org/route/v1/driving/${_userLocation.longitude},${_userLocation.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson';
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -244,7 +259,9 @@ class _MapScreenState extends State<MapScreen> {
               strokeWidth: 5,
             )
           ];
+          _activeLayer = MapLayer.evac;
         });
+        _mapController.move(destination, 14);
       }
     } catch (e) {
       debugPrint("Evac Routes Error: $e");
@@ -309,128 +326,183 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  void _generateResources() {
-    final List<Map<String, dynamic>> realResources = [
+  Future<void> _fetchResources() async {
+    final lat = _userLocation.latitude;
+    final lng = _userLocation.longitude;
+    const radius = 5000; // 5km search
+
+    // Overpass API Query for wider range of emergency resources
+    // nwr = nodes, ways, and relations (covers buildings and areas too)
+    final query = """
+    [out:json];
+    (
+      nwr["amenity"~"hospital|police|fire_station|shelter|pharmacy|clinic|community_centre|school|place_of_worship"](around:$radius,$lat,$lng);
+      nwr["tourism"="hotel"](around:$radius,$lat,$lng);
+      nwr["emergency"="social_facility"](around:$radius,$lat,$lng);
+    );
+    out center;
+    """;
+
+    try {
+      final url =
+          'https://overpass-api.de/api/interpreter?data=${Uri.encodeComponent(query)}';
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> elements = data['elements'];
+
+        final List<Marker> markers = [];
+        for (var element in elements) {
+          double? eLat;
+          double? eLng;
+
+          if (element['lat'] != null) {
+            eLat = (element['lat'] as num).toDouble();
+            eLng = (element['lon'] as num).toDouble();
+          } else if (element['center'] != null) {
+            eLat = (element['center']['lat'] as num).toDouble();
+            eLng = (element['center']['lon'] as num).toDouble();
+          }
+
+          if (eLat == null || eLng == null) continue;
+
+          final tags = element['tags'] ?? {};
+          final name = tags['name'] ?? "Emergency Facility";
+          final type = (tags['amenity'] ?? tags['tourism'] ?? "RESOURCE")
+              .toString()
+              .toLowerCase();
+
+          IconData icon = Icons.location_on;
+          Color color = Colors.blue;
+
+          if (type.contains('hospital') || type.contains('clinic')) {
+            icon = Icons.local_hospital;
+            color = Colors.red;
+          } else if (type.contains('police')) {
+            icon = Icons.local_police;
+            color = Colors.blue;
+          } else if (type.contains('fire')) {
+            icon = Icons.fire_truck;
+            color = Colors.orange;
+          } else if (type.contains('shelter') ||
+              type.contains('hotel') ||
+              type.contains('community_centre')) {
+            icon = Icons.home;
+            color = Colors.green;
+          } else if (type.contains('pharmacy')) {
+            icon = Icons.medical_services;
+            color = Colors.pink;
+          } else if (type.contains('school')) {
+            icon = Icons.school;
+            color = Colors.indigo;
+          } else if (type.contains('worship')) {
+            icon = Icons
+                .temple_hindu; // Generic religious icon or use Icons.church
+            color = Colors.purple;
+          }
+
+          final double resLat = eLat;
+          final double resLng = eLng;
+
+          markers.add(Marker(
+            point: LatLng(resLat, resLng),
+            width: 80,
+            height: 80,
+            child: GestureDetector(
+              onTap: () {
+                setState(() => _selectedResource = {
+                      'name': name,
+                      'type': type.toUpperCase().replaceAll('_', ' '),
+                      'lat': resLat,
+                      'lng': resLng
+                    });
+                _fetchRouteTo(LatLng(resLat, resLng));
+              },
+              child: Column(
+                children: [
+                  Icon(icon, color: color, size: 30),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ));
+        }
+
+        if (markers.isEmpty) {
+          _generateFallbackResources();
+        } else {
+          setState(() => _resourceMarkers = markers);
+        }
+      } else {
+        _generateFallbackResources();
+      }
+    } catch (e) {
+      debugPrint("Resource Fetch Error: $e");
+      _generateFallbackResources();
+    }
+  }
+
+  void _generateFallbackResources() {
+    // If API fails or returns nothing, use some regional hardcoded ones or simulate
+    final List<Map<String, dynamic>> fallback = [
       {
-        'name': 'Rajiv Gandhi Govt General Hospital',
+        'name': 'Government General Hospital',
         'type': 'HOSPITAL',
-        'lat': 13.0827,
-        'lng': 80.2753,
+        'lat': _userLocation.latitude + 0.005,
+        'lng': _userLocation.longitude + 0.005,
         'icon': Icons.local_hospital,
         'color': Colors.red
       },
       {
-        'name': 'Apollo Hospital - Greams Road',
-        'type': 'HOSPITAL',
-        'lat': 13.0605,
-        'lng': 80.2520,
-        'icon': Icons.local_hospital,
-        'color': Colors.red
-      },
-      {
-        'name': 'Stanley Medical College Hospital',
-        'type': 'HOSPITAL',
-        'lat': 13.1065,
-        'lng': 80.2801,
-        'icon': Icons.local_hospital,
-        'color': Colors.red
-      },
-      {
-        'name': 'Nehru Indoor Stadium (Shelter)',
+        'name': 'Central Relief Shelter',
         'type': 'SHELTER',
-        'lat': 13.0855,
-        'lng': 80.2711,
+        'lat': _userLocation.latitude - 0.008,
+        'lng': _userLocation.longitude + 0.002,
         'icon': Icons.home,
-        'color': Colors.orange
-      },
-      {
-        'name': 'Corporation School (Shelter)',
-        'type': 'SHELTER',
-        'lat': 13.0566,
-        'lng': 80.2582,
-        'icon': Icons.home,
-        'color': Colors.orange
-      },
-      {
-        'name': 'Anna Nagar Relief Hub',
-        'type': 'SHELTER',
-        'lat': 13.0837,
-        'lng': 80.2114,
-        'icon': Icons.home,
-        'color': Colors.orange
-      },
-      {
-        'name': 'Chennai Food Bank Hub',
-        'type': 'FOOD_BANK',
-        'lat': 13.0645,
-        'lng': 80.2645,
-        'icon': Icons.restaurant,
         'color': Colors.green
-      },
-      {
-        'name': 'No Food Waste Hub',
-        'type': 'FOOD_BANK',
-        'lat': 13.0394,
-        'lng': 80.2337,
-        'icon': Icons.restaurant,
-        'color': Colors.green
-      },
-      {
-        'name': 'Akshayapatra Kitchen',
-        'type': 'FOOD_BANK',
-        'lat': 13.1118,
-        'lng': 80.2458,
-        'icon': Icons.restaurant,
-        'color': Colors.green
-      },
-      {
-        'name': 'Kilpauk Water Works',
-        'type': 'WATER_POINT',
-        'lat': 13.0829,
-        'lng': 80.2427,
-        'icon': Icons.water_drop,
-        'color': Colors.blue
-      },
-      {
-        'name': 'T.Nagar MetroWater',
-        'type': 'WATER_POINT',
-        'lat': 13.0410,
-        'lng': 80.2350,
-        'icon': Icons.water_drop,
-        'color': Colors.blue
-      },
-      {
-        'name': 'Adyar Water Station',
-        'type': 'WATER_POINT',
-        'lat': 13.0064,
-        'lng': 80.2514,
-        'icon': Icons.water_drop,
-        'color': Colors.blue
       },
     ];
 
     final List<Marker> markers = [];
-    for (var res in realResources) {
+    for (var res in fallback) {
       markers.add(Marker(
         point: LatLng(res['lat'] as double, res['lng'] as double),
-        width: 60,
-        height: 60,
-        child: Column(
-          children: [
-            Icon(res['icon'] as IconData,
-                color: res['color'] as Color, size: 28),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(4),
+        width: 80,
+        height: 80,
+        child: GestureDetector(
+          onTap: () =>
+              _fetchRouteTo(LatLng(res['lat'] as double, res['lng'] as double)),
+          child: Column(
+            children: [
+              Icon(res['icon'] as IconData,
+                  color: res['color'] as Color, size: 30),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  res['name'] as String,
+                  style: const TextStyle(color: Colors.white, fontSize: 8),
+                ),
               ),
-              child: Text(
-                res['type'] as String,
-                style: const TextStyle(color: Colors.white, fontSize: 8),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ));
     }
@@ -492,18 +564,63 @@ class _MapScreenState extends State<MapScreen> {
     return Positioned(
       bottom: 100,
       left: 15,
+      right: 15,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_weatherInfo != null)
-            _infoCard(
-                "🌡️ ${_weatherInfo!['temperature']}°C | 💨 ${_weatherInfo!['windspeed']} km/h",
-                const Color(0xFF00f3ff)),
-          const SizedBox(height: 8),
-          if (_seismicInfo != null)
-            _infoCard(
-                "🫨 SEISMIC: ${_seismicInfo!['mag']} Mag - ${_seismicInfo!['place']}",
-                const Color(0xFFffaa00)),
+          if (_selectedResource != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00ff9d),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 10)],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.directions, color: Colors.black),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_selectedResource!['name'],
+                            style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13)),
+                        Text("NAVIGATING TO ${_selectedResource!['type']}",
+                            style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.black),
+                    onPressed: () => setState(() {
+                      _selectedResource = null;
+                      _evacRoutes = [];
+                      _activeLayer = MapLayer.resources;
+                    }),
+                  )
+                ],
+              ),
+            ),
+          Row(
+            children: [
+              if (_weatherInfo != null)
+                _infoCard(
+                    "🌡️ ${_weatherInfo!['temperature']}°C | 💨 ${_weatherInfo!['windspeed']} km/h",
+                    const Color(0xFF00f3ff)),
+              const SizedBox(width: 8),
+              if (_seismicInfo != null)
+                _infoCard("🫨 SEISMIC: ${_seismicInfo!['mag']} Mag",
+                    const Color(0xFFffaa00)),
+            ],
+          ),
         ],
       ),
     );
@@ -547,10 +664,14 @@ class _MapScreenState extends State<MapScreen> {
                 CircleLayer(circles: _riskCircles),
                 MarkerLayer(markers: _buoyMarkers),
               ],
-              if (_activeLayer == MapLayer.resources)
+              // Show resources in both Resources and Evac layers
+              if (_activeLayer == MapLayer.resources ||
+                  _activeLayer == MapLayer.evac)
                 MarkerLayer(markers: _resourceMarkers),
+
               if (_activeLayer == MapLayer.evac)
                 PolylineLayer(polylines: _evacRoutes),
+
               MarkerLayer(markers: _sosMarkers),
               MarkerLayer(
                 markers: [
