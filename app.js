@@ -75,6 +75,11 @@ class SentinelDashboard {
                 if (sectionId === 'dashboard' && this.map) {
                     setTimeout(() => this.map.invalidateSize(), 200);
                 }
+
+                // Trigger Resource Fetching when section is opened
+                if (sectionId === 'resources' && this.resourceLocator) {
+                    this.resourceLocator.updateResourceLayer();
+                }
             });
         });
 

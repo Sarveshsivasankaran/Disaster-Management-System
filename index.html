@@ -55,6 +55,10 @@
                     <span class="icon">🆘</span>
                     <span class="label">SOS ALERTS</span>
                 </a>
+                <a href="#" class="nav-item" data-section="resources">
+                    <span class="icon">🔍</span>
+                    <span class="label">RESOURCES</span>
+                </a>
 
             </nav>
 
@@ -371,6 +375,26 @@
                     <div id="sos-feed-container" class="sos-feed">
                         <!-- Alerts Loaded via JS -->
                         <div class="loading-spinner">Loading Alerts...</div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Resources View -->
+            <div id="resources" class="content-view">
+                <section class="panel glass-panel full-height">
+                    <div class="panel-header-actions">
+                        <h2 class="panel-title"><span class="icon">🔍</span> EMERGENCY RESOURCES</h2>
+                        <div class="resource-filters">
+                            <button class="action-btn small res-filter active" data-type="ALL">ALL</button>
+                            <button class="action-btn small res-filter" data-type="SHELTER">SHELTERS</button>
+                            <button class="action-btn small res-filter" data-type="HOSPITAL">HOSPITALS</button>
+                            <button class="action-btn small res-filter" data-type="FOOD_BANK">FOOD BANKS</button>
+                            <button class="action-btn small res-filter" data-type="WATER_POINT">WATER POINTS</button>
+                        </div>
+                    </div>
+                    <div id="resource-list-container" class="resource-grid-view">
+                        <!-- Content Injected via JS -->
+                        <div class="loading-spinner">Locating Resources...</div>
                     </div>
                 </section>
             </div>
