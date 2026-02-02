@@ -156,7 +156,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
-              ? const Color(0xFF00ff9d).withOpacity(0.1)
+              ? const Color(0xFF00ff9d).withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
@@ -175,14 +175,16 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: _officialStream,
       builder: (context, snapshot) {
-        if (!snapshot.hasData)
+        if (!snapshot.hasData) {
           return const Center(
               child: CircularProgressIndicator(color: Color(0xFF00ff9d)));
+        }
         final alerts = snapshot.data!;
-        if (alerts.isEmpty)
+        if (alerts.isEmpty) {
           return const Center(
               child: Text("No official alerts",
                   style: TextStyle(color: Colors.white54)));
+        }
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: alerts.length,
@@ -194,13 +196,15 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
   }
 
   Widget _buildSocialFeed() {
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(
           child: CircularProgressIndicator(color: Color(0xFF00ff9d)));
-    if (_socialPosts.isEmpty)
+    }
+    if (_socialPosts.isEmpty) {
       return const Center(
           child: Text("Scanning social media...",
               style: TextStyle(color: Colors.white54)));
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -244,10 +248,10 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF0f172a),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 10,
               offset: const Offset(0, 4))
         ],
@@ -298,9 +302,10 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                        color: themeColor.withOpacity(0.2),
+                        color: themeColor.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: themeColor.withOpacity(0.5))),
+                        border: Border.all(
+                            color: themeColor.withValues(alpha: 0.5))),
                     child: Text(severity.toString().toUpperCase(),
                         style: TextStyle(
                             color: themeColor,

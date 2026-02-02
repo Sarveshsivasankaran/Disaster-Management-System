@@ -183,6 +183,14 @@ class SentinelDashboard {
             evac: L.layerGroup(),
             sos: L.layerGroup().addTo(this.map) // Persistent SOS layer
         };
+
+        // 3. Initialize Resource Locator
+        this.resourceLocator = new ResourceLocator(this.map);
+        this.resourceLocator.resourceLayer = this.layers.resources; // Bind to our layer
+
+        // 4. Trigger Data Fetching & User Locating
+        this.populateMapLayers();
+        this.locateUser();
     }
 
     // --- SOS MARKER MANAGEMENT ---
@@ -201,13 +209,6 @@ class SentinelDashboard {
         L.marker([lat, lng], { icon: sosIcon })
             .addTo(this.layers.sos)
             .bindPopup(`<b style="color:red">ACTIVE SOS</b><br>${info}`);
-
-        // Initialize Resource Locator
-        this.resourceLocator = new ResourceLocator(this.map);
-        this.resourceLocator.resourceLayer = this.layers.resources; // Bind to our layer
-
-        this.populateMapLayers(); // Keep structure, but we will make it dynamic
-        this.locateUser(); // 1. Realtime User Location
     }
 
     locateUser() {

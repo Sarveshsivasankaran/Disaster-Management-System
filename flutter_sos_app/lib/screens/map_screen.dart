@@ -109,7 +109,7 @@ class _MapScreenState extends State<MapScreen> {
 
         circles.add(CircleMarker(
           point: LatLng(lat, lng),
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           borderStrokeWidth: 2,
           borderColor: color,
           useRadiusInMeter: true,
@@ -144,7 +144,7 @@ class _MapScreenState extends State<MapScreen> {
 
         circles.add(CircleMarker(
           point: LatLng(lat, lng),
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           borderStrokeWidth: 2,
           borderColor: color,
           useRadiusInMeter: true,
@@ -447,7 +447,7 @@ class _MapScreenState extends State<MapScreen> {
       child: Container(
         height: 50,
         decoration: BoxDecoration(
-          color: const Color(0xFF050b14).withOpacity(0.8),
+          color: const Color(0xFF050b14).withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white10),
         ),
@@ -470,7 +470,7 @@ class _MapScreenState extends State<MapScreen> {
         child: Container(
           decoration: BoxDecoration(
             color: isActive
-                ? const Color(0xFF00ff9d).withOpacity(0.2)
+                ? const Color(0xFF00ff9d).withValues(alpha: 0.2)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
@@ -513,9 +513,9 @@ class _MapScreenState extends State<MapScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF050b14).withOpacity(0.9),
+        color: const Color(0xFF050b14).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         text,
@@ -574,13 +574,14 @@ class _MapScreenState extends State<MapScreen> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF050b14).withOpacity(0.9),
+                color: const Color(0xFF050b14).withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(15),
-                border:
-                    Border.all(color: const Color(0xFF00ff9d).withOpacity(0.3)),
+                border: Border.all(
+                    color: const Color(0xFF00ff9d).withValues(alpha: 0.3)),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.5), blurRadius: 10)
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 10)
                 ],
               ),
               child: Row(

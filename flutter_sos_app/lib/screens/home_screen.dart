@@ -130,7 +130,7 @@ class DashboardView extends StatefulWidget {
 }
 
 class _DashboardViewState extends State<DashboardView> {
-  Map<String, dynamic> _stats = {
+  final Map<String, dynamic> _stats = {
     'water': '0.0m',
     'wave': '0.0m',
     'wind': '--- km/h',
@@ -179,18 +179,18 @@ class _DashboardViewState extends State<DashboardView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // HEADER
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("COMMAND CENTER",
+                      Text("COMMAND CENTER",
                           style: TextStyle(
                               color: Colors.white54,
                               fontSize: 12,
                               letterSpacing: 2)),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text("Sector: Central City",
                           style: TextStyle(
                               color: Colors.white,
@@ -200,7 +200,7 @@ class _DashboardViewState extends State<DashboardView> {
                   ),
                   CircleAvatar(
                     backgroundColor: Colors.white10,
-                    child: Icon(Icons.person, color: const Color(0xFF00ff9d)),
+                    child: Icon(Icons.person, color: Color(0xFF00ff9d)),
                   )
                 ],
               ),
@@ -212,13 +212,15 @@ class _DashboardViewState extends State<DashboardView> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                     gradient: LinearGradient(colors: [
-                      _stats['risk'] > 70 ? Colors.red : Color(0xFF00C9A7),
+                      _stats['risk'] > 70
+                          ? Colors.red
+                          : const Color(0xFF00C9A7),
                       const Color(0xFF00ff9d)
                     ]),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                          color: const Color(0xFF00ff9d).withOpacity(0.3),
+                          color: const Color(0xFF00ff9d).withValues(alpha: 0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 5))
                     ]),
@@ -326,7 +328,8 @@ class _DashboardViewState extends State<DashboardView> {
                             end: Alignment.bottomRight),
                         boxShadow: [
                           BoxShadow(
-                              color: const Color(0xFFff2a2a).withOpacity(0.4),
+                              color: const Color(0xFFff2a2a)
+                                  .withValues(alpha: 0.4),
                               blurRadius: 30,
                               spreadRadius: 5)
                         ]),
@@ -586,7 +589,7 @@ class _SOSViewState extends State<SOSView> {
                         colors: [Color(0xFFff2a2a), Color(0xFF880000)]),
                     boxShadow: [
                       BoxShadow(
-                          color: const Color(0xFFff2a2a).withOpacity(0.5),
+                          color: const Color(0xFFff2a2a).withValues(alpha: 0.5),
                           blurRadius: 40,
                           spreadRadius: 10)
                     ],
@@ -621,7 +624,7 @@ class _SOSViewState extends State<SOSView> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(20)),
             child: Text(
               "OPERATOR: ${UserProfile.name.toUpperCase()}",
@@ -641,7 +644,8 @@ class _SOSViewState extends State<SOSView> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-            color: const Color(0xFFff2a2a).withOpacity(opacity), width: 2),
+            color: const Color(0xFFff2a2a).withValues(alpha: opacity),
+            width: 2),
       ),
     );
   }

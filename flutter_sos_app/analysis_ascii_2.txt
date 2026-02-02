@@ -1,0 +1,13 @@
+Analyzing flutter_sos_app...                                    
+
+   info - Use 'const' with the constructor to improve performance - lib\screens\home_screen.dart:182:15 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\screens\home_screen.dart:184:27 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\screens\home_screen.dart:215:58 - prefer_const_constructors
+
+flutter : 3 issues found. (ran in 8.2s)
+At line:1 char:1
++ flutter analyze --no-pub > analysis_output_2.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo              : NotSpecified: (3 iss    ues found. (ran in 8.2s    ):String) [], RemoteExc    eption
+    + FullyQualifiedErrorId     : NativeCommandError
+ 
