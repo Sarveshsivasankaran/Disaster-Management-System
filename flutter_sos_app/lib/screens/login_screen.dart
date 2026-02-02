@@ -70,9 +70,8 @@ class _LoginScreenState extends State<LoginScreen> {
     // TWILIO CREDENTIALS - PLEASE FILL THESE IN
     const String accountSid = 'ACa7209437c9427fdbce3c43808c22eb43';
     const String authToken =
-        'ee4d07c46e467f5063985046d3ae3b03'; // Provided Auth Token
-    const String twilioNumber =
-        '+16168670252'; // e.g., '+1234567890'
+        'b0a8a2a1dce1b1b8da5b41b5fb0709f9'; // Provided Auth Token
+    const String twilioNumber = '+16168670252'; // e.g., '+1234567890'
 
     // Ensure phone is in E.164 format (starts with +)
     String targetPhone = phone.startsWith('+') ? phone : '+$phone';
