@@ -366,17 +366,33 @@
             </div>
             <!-- SOS Alert View -->
             <div id="sos" class="content-view">
-                <section class="panel glass-panel full-height sos-panel">
-                    <div class="panel-header-actions">
-                        <h2 class="panel-title"><span class="icon">🆘</span> INCOMING SOS ALERTS</h2>
-                        <button class="action-btn small" onclick="fetchSOSAlerts()">🔄 REFRESH</button>
-                    </div>
+                <div class="sos-layout">
+                    <section class="panel glass-panel full-height sos-feed-panel">
+                        <div class="panel-header-actions">
+                            <h2 class="panel-title"><span class="icon">🆘</span> INCOMING SOS</h2>
+                            <button class="action-btn small" onclick="fetchSOSAlerts()">🔄 REFRESH</button>
+                        </div>
+                        <div id="sos-feed-container" class="sos-feed">
+                            <div class="loading-spinner">Loading Alerts...</div>
+                        </div>
+                    </section>
 
-                    <div id="sos-feed-container" class="sos-feed">
-                        <!-- Alerts Loaded via JS -->
-                        <div class="loading-spinner">Loading Alerts...</div>
-                    </div>
-                </section>
+                    <section class="panel glass-panel full-height sos-verify-panel" id="sos-verification-panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title"><span class="icon">🛡️</span> SOS VERIFICATION</h2>
+                        </div>
+                        <!-- Mini Map for SOS Location -->
+                        <div id="sos-mini-map" class="mini-map-container" style="display:none;"></div>
+
+                        <div id="verify-placeholder" class="verify-empty-state">
+                            <div class="empty-icon">📡</div>
+                            <p>Select an alert to begin AI Verification via Sensor Synergy</p>
+                        </div>
+                        <div id="verify-content" class="verify-content" style="display:none;">
+                            <!-- Dynamic Content -->
+                        </div>
+                    </section>
+                </div>
             </div>
 
             <!-- Resources View -->

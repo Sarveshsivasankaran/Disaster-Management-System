@@ -35,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _changeTab(int index, [MapLayer? layer]) {
     setState(() => _selectedIndex = index);
     if (index == 2 && layer != null) {
-      // Small delay to ensure the stack has switched before calling the state
       Future.delayed(const Duration(milliseconds: 100), () {
         _mapScreenKey.currentState?.setActiveLayer(layer);
       });
@@ -43,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _startDangerCheck() {
-    // Check for nearby danger periodically
     _dangerCheckTimer = Timer.periodic(const Duration(minutes: 2), (timer) {
       _checkForNearbyDangers();
     });
@@ -52,8 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkForNearbyDangers() async {
     try {
       final position = await Geolocator.getCurrentPosition();
-
-      // Query 'buoys' for high water levels near user (+/- 0.05 degrees)
       final response = await Supabase.instance.client
           .from('buoys')
           .select()
@@ -99,12 +95,10 @@ class _HomeScreenState extends State<HomeScreen> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          DashboardView(
-              onTabChange: (i, [layer]) =>
-                  _changeTab(i, layer)), // New Command Center UI
-          const SocialFeedScreen(), // Social Media News
-          MapScreen(key: _mapScreenKey), // Resources & Routes
-          const SOSView(), // Dedicated SOS/Report Page
+          DashboardView(onTabChange: (i, [layer]) => _changeTab(i, layer)),
+          const SocialFeedScreen(),
+          MapScreen(key: _mapScreenKey),
+          const SOSView(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -130,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ============================================================================
-// DASHBOARD VIEW (COMMAND CENTER)
+// DASHBOARD VIEW (COMMAND CENTER) - Custom Visualization
 // ============================================================================
 class DashboardView extends StatefulWidget {
   final Function(int, [MapLayer?]) onTabChange;
@@ -147,6 +141,7 @@ class _DashboardViewState extends State<DashboardView> {
     'wind': '--- km/h',
     'risk': 0,
   };
+  List<double> _waterHistory = [];
 
   @override
   void initState() {
@@ -161,18 +156,24 @@ class _DashboardViewState extends State<DashboardView> {
           .from('buoys')
           .select()
           .order('last_update', ascending: false)
-          .limit(1);
+          .limit(10);
 
       if (buoyData.isNotEmpty) {
         final latest = buoyData[0];
         setState(() {
           _stats['water'] = "${latest['water_level'].toStringAsFixed(1)}m";
           _stats['wave'] = "${latest['wave_height'].toStringAsFixed(1)}m";
-          // Calculate a simple risk score like in app.js
           double wl = (latest['water_level'] as num).toDouble();
           double wh = (latest['wave_height'] as num).toDouble();
           _stats['risk'] =
               ((wl / 8 * 50) + (wh / 5 * 50)).clamp(0, 100).toInt();
+
+          // Map history for custom chart
+          _waterHistory = buoyData
+              .map((e) => (e['water_level'] as num).toDouble())
+              .toList()
+              .reversed
+              .toList();
         });
       }
     } catch (e) {
@@ -189,178 +190,24 @@ class _DashboardViewState extends State<DashboardView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // HEADER
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("COMMAND CENTER",
-                          style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                              letterSpacing: 2)),
-                      SizedBox(height: 4),
-                      Text("Sector: Central City",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  CircleAvatar(
-                    backgroundColor: Colors.white10,
-                    child: Icon(Icons.person, color: Color(0xFF00ff9d)),
-                  )
-                ],
-              ),
+              _buildHeader(),
               const SizedBox(height: 30),
-
-              // LIVE ALERTS BANNER (Risk Score)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [
-                      _stats['risk'] > 70
-                          ? Colors.red
-                          : const Color(0xFF00C9A7),
-                      const Color(0xFF00ff9d)
-                    ]),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                          color: const Color(0xFF00ff9d).withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 5))
-                    ]),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("AI RISK ASSESSMENT",
-                            style: TextStyle(
-                                color: Colors.black87,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16)),
-                        Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                                color: Colors.white24,
-                                borderRadius: BorderRadius.circular(10)),
-                            child: Text("${_stats['risk']}% PROBABILITY",
-                                style: const TextStyle(
-                                    color: Colors.black87,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold)))
-                      ],
-                    ),
-                    const SizedBox(height: 15),
-                    Text(
-                        _stats['risk'] > 60
-                            ? "HIGH RISK OF FLOOD SURGE"
-                            : "SYSTEM STABLE - NO IMMEDIATE THREAT",
-                        style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
+              _buildRiskBanner(),
               const SizedBox(height: 30),
-
-              // TELEMETRY ROW
-              const Text("LIVE TELEMETRY",
+              const Text("LIVE TELEMETRY ANALYTICS",
                   style: TextStyle(
                       color: Colors.white,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1)),
-              const SizedBox(height: 15),
-              SizedBox(
-                height: 120,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _buildStatCard("WATER LEVEL", _stats['water'], Colors.blue,
-                        Icons.water),
-                    const SizedBox(width: 15),
-                    _buildStatCard("WAVE HEIGHT", _stats['wave'], Colors.cyan,
-                        Icons.tsunami),
-                    const SizedBox(width: 15),
-                    _buildStatCard("SYSTEM TEMP", "24.5°C", Colors.orange,
-                        Icons.thermostat),
-                  ],
-                ),
-              ),
+                      letterSpacing: 1.5)),
+              const SizedBox(height: 20),
+              _buildChartSection(),
               const SizedBox(height: 30),
-
-              // QUICK ACCESS
-              const Text("QUICK ACCESS",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1)),
-              const SizedBox(height: 15),
-              Row(
-                children: [
-                  Expanded(
-                      child: GestureDetector(
-                          onTap: () =>
-                              widget.onTabChange(2, MapLayer.resources),
-                          child: _buildSmallBtn(
-                              "SHELTERS", Icons.home, Colors.blue))),
-                  const SizedBox(width: 15),
-                  Expanded(
-                      child: GestureDetector(
-                          onTap: () => widget.onTabChange(2, MapLayer.evac),
-                          child: _buildSmallBtn("EVAC PATH",
-                              Icons.directions_run, Colors.orange))),
-                ],
-              ),
+              _buildStatGrid(),
               const SizedBox(height: 30),
-
-              // REPORT BUTTON (LARGE)
-              Center(
-                child: GestureDetector(
-                  onTap: () => widget.onTabChange(3),
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                            colors: [Color(0xFFff2a2a), Color(0xFFd90429)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight),
-                        boxShadow: [
-                          BoxShadow(
-                              color: const Color(0xFFff2a2a)
-                                  .withValues(alpha: 0.4),
-                              blurRadius: 30,
-                              spreadRadius: 5)
-                        ]),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.warning_rounded,
-                            color: Colors.white, size: 48),
-                        SizedBox(height: 8),
-                        Text("SOS",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16))
-                      ],
-                    ),
-                  ),
-                ),
-              )
+              _buildActionGrid(),
+              const SizedBox(height: 30),
+              _buildSOSAnchor(),
             ],
           ),
         ),
@@ -368,56 +215,285 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  Widget _buildStatCard(
-      String title, String value, Color color, IconData icon) {
+  Widget _buildHeader() {
+    return const Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("COMMAND CENTER",
+                style: TextStyle(
+                    color: Colors.white54, fontSize: 12, letterSpacing: 2)),
+            SizedBox(height: 4),
+            Text("Satellite Status: ONLINE",
+                style: TextStyle(
+                    color: Color(0xFF00ff9d),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
+          ],
+        ),
+        Icon(Icons.radar, color: Color(0xFF00ff9d), size: 30)
+      ],
+    );
+  }
+
+  Widget _buildRiskBanner() {
+    bool highRisk = _stats['risk'] > 60;
     return Container(
-      width: 140,
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
           color: const Color(0xFF0f172a),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white10)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: highRisk
+                  ? Colors.red.withValues(alpha: 0.5)
+                  : const Color(0xFF00ff9d).withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+                color: (highRisk ? Colors.red : const Color(0xFF00ff9d))
+                    .withValues(alpha: 0.1),
+                blurRadius: 20)
+          ]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 12),
-          Text(title,
-              style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold)),
-          Text(value,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("AI THREAT ASSESSMENT",
+                  style: TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14)),
+              Text("${_stats['risk']}%",
+                  style: TextStyle(
+                      color: highRisk ? Colors.red : const Color(0xFF00ff9d),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            height: 6,
+            width: double.infinity,
+            decoration: BoxDecoration(
+                color: Colors.white12, borderRadius: BorderRadius.circular(3)),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: (_stats['risk'] / 100.0).clamp(0.0, 1.0),
+              child: Container(
+                  decoration: BoxDecoration(
+                      color: highRisk ? Colors.red : const Color(0xFF00ff9d),
+                      borderRadius: BorderRadius.circular(3))),
+            ),
+          ),
+          const SizedBox(height: 15),
+          Text(
+              highRisk
+                  ? "CRITICAL SURGE PROBABILITY - EVACUATE COASTAL SECTORS"
+                  : "CONDITION GREEN - NORMAL SECTOR STABILITY",
+              style: TextStyle(
+                  color: highRisk ? Colors.redAccent : Colors.white60,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _buildSmallBtn(String label, IconData icon, Color color) {
+  Widget _buildChartSection() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      height: 200,
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
           color: const Color(0xFF0f172a),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white10)),
+      child: _waterHistory.isEmpty
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF00ff9d)))
+          : CustomPaint(
+              painter: TelemetryPainter(points: _waterHistory),
+            ),
+    );
+  }
+
+  Widget _buildStatGrid() {
+    return Row(
+      children: [
+        Expanded(
+            child: _buildStatItem(
+                "WATER", _stats['water'], Icons.water, Colors.blue)),
+        const SizedBox(width: 15),
+        Expanded(
+            child: _buildStatItem(
+                "SURGE", _stats['wave'], Icons.tsunami, Colors.cyan)),
+        const SizedBox(width: 15),
+        Expanded(
+            child: _buildStatItem("SECTOR", "C-01", Icons.map, Colors.orange)),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(String label, String val, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+          color: const Color(0xFF0f172a),
+          borderRadius: BorderRadius.circular(15),
           border: Border.all(color: Colors.white10)),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 28),
+          Icon(icon, color: color, size: 16),
           const SizedBox(height: 8),
           Text(label,
               style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold))
+                  color: Colors.white38,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold)),
+          Text(val,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
+
+  Widget _buildActionGrid() {
+    return Row(
+      children: [
+        Expanded(
+            child: _actionBtn(
+                "SHELTERS",
+                Icons.apartment,
+                const Color(0xFF00f3ff),
+                () => widget.onTabChange(2, MapLayer.resources))),
+        const SizedBox(width: 15),
+        Expanded(
+            child: _actionBtn(
+                "EVAC PATH",
+                Icons.alt_route,
+                const Color(0xFFffaa00),
+                () => widget.onTabChange(2, MapLayer.evac))),
+      ],
+    );
+  }
+
+  Widget _actionBtn(
+      String label, IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: color.withValues(alpha: 0.3))),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(label,
+                style: TextStyle(
+                    color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSOSAnchor() {
+    return Center(
+      child: GestureDetector(
+        onTap: () => widget.onTabChange(3),
+        child: Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+                colors: [Color(0xFFff2a2a), Color(0xFF880000)]),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.red.withValues(alpha: 0.3),
+                  blurRadius: 30,
+                  spreadRadius: 5)
+            ],
+          ),
+          child: const Center(
+              child: Text("SOS",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold))),
+        ),
+      ),
+    );
+  }
+}
+
+class TelemetryPainter extends CustomPainter {
+  final List<double> points;
+  TelemetryPainter({required this.points});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.length < 2) return;
+
+    final paint = Paint()
+      ..color = const Color(0xFF00ff9d)
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          const Color(0xFF00ff9d).withValues(alpha: 0.3),
+          Colors.transparent
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final path = Path();
+    final fillPath = Path();
+
+    double maxVal = points.reduce((a, b) => a > b ? a : b);
+    if (maxVal < 1.0) maxVal = 1.0;
+
+    double stepX = size.width / (points.length - 1);
+
+    for (int i = 0; i < points.length; i++) {
+      double x = i * stepX;
+      double y = size.height - (points[i] / maxVal * (size.height * 0.8));
+
+      if (i == 0) {
+        path.moveTo(x, y);
+        fillPath.moveTo(x, size.height);
+        fillPath.lineTo(x, y);
+      } else {
+        path.lineTo(x, y);
+        fillPath.lineTo(x, y);
+      }
+    }
+
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
+
+    canvas.drawPath(fillPath, fillPaint);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(TelemetryPainter oldDelegate) =>
+      oldDelegate.points != points;
 }
 
 // ============================================================================
@@ -434,14 +510,12 @@ class _SOSViewState extends State<SOSView> {
   bool _isSending = false;
 
   Future<void> _handleSOS() async {
-    // 1. Check Permissions
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return;
     }
 
-    // 2. Prompt Description
     String? description = await _showDescriptionDialog();
     if (description == null || description.isEmpty) return;
 
@@ -449,8 +523,6 @@ class _SOSViewState extends State<SOSView> {
 
     try {
       final position = await Geolocator.getCurrentPosition();
-
-      // 3. Send to Supabase
       final now = DateTime.now();
       final dateStr =
           "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
@@ -472,7 +544,9 @@ class _SOSViewState extends State<SOSView> {
 
       if (mounted) _showSuccessDialog();
     } catch (e) {
-      if (mounted) _showSnack("Failed to broadcast SOS: $e");
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Failed to broadcast SOS: $e")));
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
@@ -486,37 +560,22 @@ class _SOSViewState extends State<SOSView> {
         backgroundColor: const Color(0xFF0f172a),
         title: const Text("DESCRIBE EMERGENCY",
             style: TextStyle(
-                color: Color(0xFFff2a2a),
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5)),
+                color: Color(0xFFff2a2a), fontWeight: FontWeight.bold)),
         content: TextField(
           autofocus: true,
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-            hintText: "e.g. Floodwater entered house, Need medical help",
-            hintStyle: TextStyle(color: Colors.white24, fontSize: 13),
-            enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white12)),
-            focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFFff2a2a))),
-          ),
+              hintText: "e.g. Floodwater entered house",
+              hintStyle: TextStyle(color: Colors.white24, fontSize: 13)),
           onChanged: (val) => desc = val,
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, null),
-              child:
-                  const Text("CANCEL", style: TextStyle(color: Colors.grey))),
+              child: const Text("CANCEL")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFff2a2a),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8))),
-            onPressed: () => Navigator.pop(context, desc),
-            child: const Text("SEND SOS",
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
+              onPressed: () => Navigator.pop(context, desc),
+              child: const Text("SEND SOS")),
         ],
       ),
     );
@@ -532,132 +591,65 @@ class _SOSViewState extends State<SOSView> {
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.radar, color: Color(0xFF00ff9d), size: 64),
+            Icon(Icons.radar, color: Color(0xFF00ff9d), size: 60),
             SizedBox(height: 20),
-            Text(
-              "Your location is being tracked by the Command Center. Maintain radio silence and stay on high ground.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 13),
-            ),
+            Text("Rescue coordinators have been notified of your location.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 13)),
           ],
         ),
         actions: [
-          Center(
-            child: TextButton(
+          TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("DISMISS",
-                  style: TextStyle(
-                      color: Color(0xFF00ff9d), fontWeight: FontWeight.bold)),
-            ),
-          )
+              child: const Text("DISMISS"))
         ],
       ),
     );
-  }
-
-  void _showSnack(String msg) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-          image: DecorationImage(
-              image: NetworkImage(
-                  "https://www.transparenttextures.com/patterns/carbon-fibre.png"),
-              repeat: ImageRepeat.repeat,
-              opacity: 0.1)),
+      color: const Color(0xFF050b14),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.radio_button_checked,
-              color: Color(0xFFff2a2a), size: 12),
-          const SizedBox(height: 8),
-          const Text("LIVE TELEMETRY: ACTIVE",
+          const Text("EMERGENCY BROADCAST UNIT",
               style: TextStyle(
                   color: Color(0xFF00ff9d),
-                  letterSpacing: 3,
-                  fontSize: 10,
+                  letterSpacing: 2,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold)),
-          const SizedBox(height: 60),
+          const SizedBox(height: 100),
           GestureDetector(
             onLongPress: _isSending ? null : _handleSOS,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Background Glow
-                _buildPulseCircle(300, 0.1),
-                _buildPulseCircle(260, 0.2),
-
-                Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const RadialGradient(
-                        colors: [Color(0xFFff2a2a), Color(0xFF880000)]),
-                    boxShadow: [
-                      BoxShadow(
-                          color: const Color(0xFFff2a2a).withValues(alpha: 0.5),
-                          blurRadius: 40,
-                          spreadRadius: 10)
-                    ],
-                  ),
-                  child: Center(
-                    child: _isSending
-                        ? const CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 6)
-                        : const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text("SOS",
-                                  style: TextStyle(
-                                      fontSize: 64,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      letterSpacing: -2)),
-                              Text("HOLD TO BROADCAST",
-                                  style: TextStyle(
-                                      fontSize: 9,
-                                      color: Colors.white70,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1)),
-                            ],
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 80),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(20)),
-            child: Text(
-              "OPERATOR: ${UserProfile.name.toUpperCase()}",
-              style: const TextStyle(
-                  color: Colors.white38, fontSize: 11, letterSpacing: 1),
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.red.withValues(alpha: 0.1),
+                  border: Border.all(color: Colors.red, width: 4)),
+              child: Center(
+                child: _isSending
+                    ? const CircularProgressIndicator(color: Colors.red)
+                    : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                            Text("SOS",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.bold)),
+                            Text("HOLD TO SEND",
+                                style: TextStyle(
+                                    color: Colors.white54, fontSize: 10))
+                          ]),
+              ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPulseCircle(double size, double opacity) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-            color: const Color(0xFFff2a2a).withValues(alpha: opacity),
-            width: 2),
       ),
     );
   }

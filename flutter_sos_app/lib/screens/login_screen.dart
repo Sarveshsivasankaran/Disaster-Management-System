@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
         url,
         headers: {
           'Authorization':
-              'Basic ' + base64Encode(utf8.encode('$accountSid:$authToken')),
+              'Basic ${base64Encode(utf8.encode('$accountSid:$authToken'))}',
         },
         body: {
           'From': twilioNumber,
