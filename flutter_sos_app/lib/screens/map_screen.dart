@@ -415,7 +415,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _fetchResources() async {
-    const radius = 5000;
+    const radius = 2000;
     final query =
         """[out:json];(nwr["amenity"~"hospital|police|fire_station|shelter|pharmacy|clinic|community_centre|school|place_of_worship"](around:$radius,${_userLocation.latitude},${_userLocation.longitude});nwr["tourism"="hotel"](around:$radius,${_userLocation.latitude},${_userLocation.longitude});nwr["emergency"="social_facility"](around:$radius,${_userLocation.latitude},${_userLocation.longitude}););out center;""";
 
@@ -457,6 +457,13 @@ class MapScreenState extends State<MapScreen> {
 
           final double resLat = eLat;
           final double resLng = eLng;
+
+          // Double check distance strict limit
+          if (Geolocator.distanceBetween(_userLocation.latitude,
+                  _userLocation.longitude, resLat, resLng) >
+              2000) {
+            continue;
+          }
 
           final mapData = {
             'name': name,

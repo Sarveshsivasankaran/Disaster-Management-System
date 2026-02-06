@@ -52,7 +52,7 @@ export class ResourceLocator {
 
         const lat = this.currentLocation.lat;
         const lng = this.currentLocation.lng;
-        const radius = 5000; // 5km
+        const radius = 2000; // 2km
 
         const query = `
             [out:json];
@@ -96,7 +96,7 @@ export class ResourceLocator {
                     lng: resLng,
                     distance: this.calculateDistance(lat, lng, resLat, resLng)
                 };
-            }).filter(r => r !== null);
+            }).filter(r => r !== null && r.distance <= 2.0);
 
             if (resources.length === 0) {
                 resources = this.getFallbackResources(lat, lng);
