@@ -59,8 +59,8 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
   Future<void> _fetchSocialNews(String location) async {
     try {
       // Fetch news that mentions disaster keywords and location
-      final query =
-          Uri.encodeComponent("disaster OR flood OR rescue $location");
+      final query = Uri.encodeComponent(
+          "disaster OR flood OR rescue OR cyclone OR earthquake OR storm OR emergency $location");
       final rssUrl =
           "https://news.google.com/rss/search?q=$query&hl=en-IN&gl=IN&ceid=IN:en";
       final apiUrl =
@@ -70,6 +70,27 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List items = data['items'] ?? [];
+
+        // STRICT FILTER: Client-side verification
+        final keywords = [
+          'disaster',
+          'flood',
+          'rescue',
+          'cyclone',
+          'earthquake',
+          'storm',
+          'emergency',
+          'rain',
+          'alert',
+          'warning',
+          'collapse',
+          'fire'
+        ];
+        final filteredItems = items.where((item) {
+          final content =
+              "${item['title']} ${item['description']}".toLowerCase();
+          return keywords.any((k) => content.contains(k));
+        }).toList();
 
         final List<String> socialPlatforms = [
           'Twitter',
@@ -83,7 +104,7 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
         ];
 
         setState(() {
-          _socialPosts = items.map((item) {
+          _socialPosts = filteredItems.map((item) {
             final platformIndex = items.indexOf(item) % 3;
             return {
               'title': item['title'],

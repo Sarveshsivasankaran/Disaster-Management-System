@@ -59,11 +59,15 @@ class MapScreenState extends State<MapScreen> {
 
   Future<void> _initializeMapData() async {
     await _getCurrentLocation();
+    // Fetch independent data
     _fetchSensors();
     _fetchSOSAlerts();
     _fetchWeather();
     _fetchSeismicData();
-    _fetchResources();
+
+    // Await resources so that we can calculate routes if needed
+    await _fetchResources();
+
     if (_activeLayer == MapLayer.evac && _evacRoutes.isEmpty) {
       _fetchAutomaticEvacRoute();
     }
@@ -240,6 +244,10 @@ class MapScreenState extends State<MapScreen> {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        if (data['routes'] == null || (data['routes'] as List).isEmpty) {
+          debugPrint("No route found by OSRM");
+          return;
+        }
         final coordinates =
             data['routes'][0]['geometry']['coordinates'] as List;
         final distance =
@@ -415,7 +423,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _fetchResources() async {
-    const radius = 2000;
+    const radius = 5000;
     final query =
         """[out:json];(nwr["amenity"~"hospital|police|fire_station|shelter|pharmacy|clinic|community_centre|school|place_of_worship"](around:$radius,${_userLocation.latitude},${_userLocation.longitude});nwr["tourism"="hotel"](around:$radius,${_userLocation.latitude},${_userLocation.longitude});nwr["emergency"="social_facility"](around:$radius,${_userLocation.latitude},${_userLocation.longitude}););out center;""";
 
@@ -461,7 +469,7 @@ class MapScreenState extends State<MapScreen> {
           // Double check distance strict limit
           if (Geolocator.distanceBetween(_userLocation.latitude,
                   _userLocation.longitude, resLat, resLng) >
-              2000) {
+              radius) {
             continue;
           }
 
