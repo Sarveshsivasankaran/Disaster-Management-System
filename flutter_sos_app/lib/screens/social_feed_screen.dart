@@ -58,71 +58,130 @@ class _SocialFeedScreenState extends State<SocialFeedScreen> {
 
   Future<void> _fetchSocialNews(String location) async {
     try {
-      // Fetch news that mentions disaster keywords and location
+      // 1. Primary Search (Specific Location)
+      var posts = await _performSearch(location);
+
+      // 2. Fallback Search (National) if local yields < 2 results
+      if (posts.isEmpty) {
+        debugPrint("Local news empty. Fetching national news...");
+        posts = await _performSearch("India");
+      }
+
+      // 3. Last Resort (Global/General)
+      if (posts.isEmpty) {
+        posts = await _performSearch("Global Disaster");
+      }
+
+      if (mounted) {
+        setState(() {
+          _socialPosts = posts;
+        });
+      }
+    } catch (e) {
+      debugPrint("Social Fetch Error: $e");
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _performSearch(
+      String queryLocation) async {
+    try {
       final query = Uri.encodeComponent(
-          "disaster OR flood OR rescue OR cyclone OR earthquake OR storm OR emergency $location");
+          "disaster OR flood OR cyclone OR earthquake OR emergency $queryLocation");
       final rssUrl =
           "https://news.google.com/rss/search?q=$query&hl=en-IN&gl=IN&ceid=IN:en";
       final apiUrl =
           "https://api.rss2json.com/v1/api.json?rss_url=${Uri.encodeComponent(rssUrl)}";
 
       final response = await http.get(Uri.parse(apiUrl));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List items = data['items'] ?? [];
 
-        // STRICT FILTER: Client-side verification
-        final keywords = [
-          'disaster',
-          'flood',
-          'rescue',
-          'cyclone',
-          'earthquake',
-          'storm',
-          'emergency',
-          'rain',
-          'alert',
-          'warning',
-          'collapse',
-          'fire'
-        ];
-        final filteredItems = items.where((item) {
-          final content =
-              "${item['title']} ${item['description']}".toLowerCase();
-          return keywords.any((k) => content.contains(k));
-        }).toList();
+      if (response.statusCode != 200) return [];
 
-        final List<String> socialPlatforms = [
-          'Twitter',
-          'Instagram',
-          'Facebook'
-        ];
-        final List<String> avatars = [
-          'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
-          'https://i.pravatar.cc/150?u=insta',
-          'https://i.pravatar.cc/150?u=fb',
-        ];
+      final data = json.decode(response.body);
+      final List items = data['items'] ?? [];
 
-        setState(() {
-          _socialPosts = filteredItems.map((item) {
-            final platformIndex = items.indexOf(item) % 3;
+      // Keyword Filter
+      final keywords = [
+        'disaster',
+        'flood',
+        'rescue',
+        'cyclone',
+        'earthquake',
+        'storm',
+        'emergency',
+        'rain',
+        'alert',
+        'warning',
+        'collapse',
+        'fire',
+        'tsunami',
+        'damage',
+        'crisis',
+        'help',
+        'evacuation'
+      ];
+
+      final List<String> socialPlatforms = ['Twitter', 'Instagram', 'Facebook'];
+      final List<String> avatars = [
+        'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Instagram_logo_2016.svg/2048px-Instagram_logo_2016.svg.png',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/2021_Facebook_icon.svg/2048px-2021_Facebook_icon.svg.png',
+      ];
+
+      return items
+          .where((item) {
+            // Less strict filter: Title OR Description contains ANY keyword
+            final content =
+                "${item['title']} ${item['description']}".toLowerCase();
+            // If keyword list is too strict, we can skip it for a fallback search
+            // But for now, just ensure we have robust keywords
+            return keywords.any((k) => content.contains(k));
+          })
+          .map((item) {
+            // Date Verification (Soft)
+            String timeAgo = "Recently";
+            if (item['pubDate'] != null) {
+              try {
+                final pubDate = DateTime.parse(item['pubDate']);
+                final diff = DateTime.now().difference(pubDate);
+
+                // CHANGED: Filter for last 1 month (30 days)
+                if (diff.inDays > 30) {
+                  return null; // Skip old posts
+                }
+
+                if (diff.inHours < 24)
+                  timeAgo = "${diff.inHours}h ago";
+                else
+                  timeAgo = "${diff.inDays}d ago";
+              } catch (e) {
+                /* ignore parse error */
+              }
+            } else {
+              return null; // Skip if no date
+            }
+
+            final platformIndex = (item['title'].hashCode).abs() % 3;
+
             return {
               'title': item['title'],
               'message':
                   item['description']?.replaceAll(RegExp(r'<[^>]*>'), '') ?? '',
               'source': socialPlatforms[platformIndex],
               'avatar': avatars[platformIndex],
-              'created_at': item['pubDate'],
+              'created_at': timeAgo, // Display string directly
               'hashtags':
-                  "#disaster #${location.toLowerCase()} #emergency #${socialPlatforms[platformIndex].toLowerCase()}",
-              'verified': items.indexOf(item) % 4 == 0, // Randomly verify some
-              'severity': items.indexOf(item) % 5 == 0 ? 'critical' : 'info',
+                  "#disaster #${queryLocation.toLowerCase().replaceAll(' ', '')}",
+              'verified': (item['title'].hashCode).abs() % 5 == 0,
+              'severity':
+                  (item['title'].hashCode).abs() % 7 == 0 ? 'critical' : 'info',
             };
-          }).toList();
-        });
-      }
+          })
+          .where((e) => e != null)
+          .cast<Map<String, dynamic>>()
+          .toList();
     } catch (e) {
-      debugPrint("Social Fetch Error: $e");
+      debugPrint("Search internal error: $e");
+      return [];
     }
   }
 

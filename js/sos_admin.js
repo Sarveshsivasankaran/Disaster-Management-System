@@ -420,14 +420,20 @@ async function verifySOSAlert(alert) {
         // D. Cluster Analysis (Are others reporting nearby?)
         const clusterCount = await checkAlertClustering(alert);
 
+        // E. User Identity verification
+        const userProfile = await checkUserRegistration(alert.phone);
+
+        // F. Risk Zone Analysis
+        const nearbyHazard = checkHazardProximity(lat, lng);
+
         // 3. SECURE SCORING
-        const score = calculateUltimateScore(alert, weather, nearbySensors, news, nasaEvents, clusterCount);
+        const score = calculateUltimateScore(alert, weather, nearbySensors, news, nasaEvents, clusterCount, userProfile, nearbyHazard);
 
         // 4. PREPARE REASONING
-        const reasoning = generateDeepReasoning(score, weather, nearbySensors, news, nasaEvents, clusterCount);
+        const reasoning = generateDeepReasoning(score, weather, nearbySensors, news, nasaEvents, clusterCount, userProfile, nearbyHazard);
 
         // 5. RENDER
-        renderDeepVerificationPanel(alert, locationName, weather, nearbySensors, news, nasaEvents, score, reasoning, clusterCount);
+        renderDeepVerificationPanel(alert, locationName, weather, nearbySensors, news, nasaEvents, score, reasoning, clusterCount, userProfile, nearbyHazard);
 
     } catch (e) {
         console.error("Deep Verification Failed", e);
@@ -474,89 +480,130 @@ async function checkAlertClustering(activeAlert) {
     } catch (e) { return 0; }
 }
 
-function calculateUltimateScore(alert, weather, sensors, news, nasa, clusters) {
+async function checkUserRegistration(phone) {
+    try {
+        const { data } = await window.supabaseClient
+            .from('mobile_users')
+            .select('*')
+            .eq('phone', phone)
+            .single();
+        return data;
+    } catch (e) { return null; }
+}
+
+function checkHazardProximity(lat, lng) {
+    // Defined Hazards (matching app.js demo locations relative to base)
+    // Assuming base is ~ Chennai 13.0827, 80.2707 for this context
+    const hazards = [
+        { lat: 13.0877, lng: 80.2827, radius: 1500, name: "DAM DISCHARGE ZONE" },
+        { lat: 13.0747, lng: 80.2657, radius: 1200, name: "LOW LYING FLOOD AREA" },
+        { lat: 13.0827, lng: 80.2707, radius: 5000, name: "GENERAL FLOOD ZONE" } // Catch-all for demo
+    ];
+
+    return hazards.find(h => {
+        const dist = Math.sqrt(Math.pow(lat - h.lat, 2) + Math.pow(lng - h.lng, 2)) * 111000; // Rough meters
+        return dist < h.radius;
+    });
+}
+
+function calculateUltimateScore(alert, weather, sensors, news, nasa, clusters, user, hazard) {
     let score = 20; // Base trust
 
-    // 1. Weather Proofing (+25 max)
+    // 1. Identity & Reputation (+30 max)
+    if (user) {
+        score += 20; // Registered User
+        // Bonus for account age could go here
+    }
+    // Phone format check (Simple proxy)
+    if (alert.phone && alert.phone.length >= 10) score += 5;
+
+    // 2. Weather Proofing (+20 max)
     if (weather && weather.current) {
-        if (weather.current.rain > 0.5) score += 15;
+        if (weather.current.rain > 0.5) score += 10;
         if (weather.current.wind_speed_10m > 30) score += 10;
     }
 
-    // 2. Hard Sensor Verification (+30 max)
+    // 3. Hard Sensor/Hazard Verification (+30 max)
     const anomaly = sensors.find(s => s.water_level > 4.5 || s.wave_height > 2.5);
-    if (anomaly) score += 30;
-    else if (sensors.length > 0) score += 10; // Sensors are normal but nearby
+    if (anomaly) score += 20;
+    else if (sensors.length > 0) score += 5; // Sensors are active
 
-    // 3. Social & Global Proofing (+20 max)
-    if (news.length > 0) score += 10;
-    if (nasa.length > 0) score += 10;
+    if (hazard) score += 15; // In a known danger zone
 
-    // 4. Community/Cluster Validation (+15)
-    if (clusters > 1) score += 15;
-    else if (clusters === 1) score += 10;
+    // 4. Social & Global Proofing (+10 max)
+    if (news.length > 0) score += 5;
+    if (nasa.length > 0) score += 5;
 
-    // 5. Keyword Validation (+10)
+    // 5. Community/Cluster Validation (+10)
+    if (clusters > 1) score += 10;
+    else if (clusters === 1) score += 5;
+
+    // 6. Keyword Validation (+5)
     const text = alert.description.toLowerCase();
-    if (text.includes('help') || text.includes('emergency') || text.includes('flood') || text.includes('fire')) score += 10;
+    if (text.includes('help') || text.includes('emergency') || text.includes('flood') || text.includes('fire') || text.includes('stuck') || text.includes('trapped')) score += 5;
 
     return Math.min(score, 100);
 }
 
-function generateDeepReasoning(score, weather, sensors, news, nasa, clusters) {
+function generateDeepReasoning(score, weather, sensors, news, nasa, clusters, user, hazard) {
     const lines = [];
-    if (weather && weather.current.rain > 0.5) lines.push("🌧️ ENVIRONMENT: Active precipitation detected at target.");
-    if (sensors.some(s => s.water_level > 4.5)) lines.push("🚨 SENSORS: Nearby telemetry reporting hazardous water levels.");
-    if (clusters > 0) lines.push(`🤝 COMMUNITY: ${clusters} additional alert(s) detected in same sector.`);
-    if (news.length > 0) lines.push("📰 MEDIA: Local news confirms situational distress.");
-    if (nasa.length > 0) lines.push("🛰️ SATELLITE: NASA EONET anomaly matched.");
+    if (user) lines.push(`<span class="reason-valid">✅ IDENTITY:</span> Caller is a registered verified user.`);
+    else lines.push(`<span class="reason-warn">⚠️ IDENTITY:</span> Unregistered / Guest user.`);
+
+    if (hazard) lines.push(`<span class="reason-critical">🚨 ZONE:</span> Location is inside ${hazard.name}.`);
+
+    if (weather && weather.current.rain > 0.5) lines.push("🌧️ ENVIRONMENT: Active precipitation confirmed.");
+    if (sensors.some(s => s.water_level > 4.5)) lines.push("🌊 SENSORS: Critical water levels detected nearby.");
+
+    if (clusters > 0) lines.push(`🤝 CLUSTER: ${clusters} other alerts in this sector.`);
+    if (news.length > 0) lines.push("📰 NEWS: Public reports match disaster profile.");
 
     if (lines.length === 0) return "No secondary environmental or sensor data currently matches this report.";
     return lines.join("<br>");
 }
 
-function renderDeepVerificationPanel(alert, location, weather, sensors, news, nasa, score, reasoning, clusters) {
+function renderDeepVerificationPanel(alert, location, weather, sensors, news, nasa, score, reasoning, clusters, user, hazard) {
     const content = document.getElementById('verify-content');
-    const intelClass = score > 60 ? 'intel-high' : 'intel-low';
-    const intelText = score > 60 ? 'AUTHENTICATED' : 'PROBABLE ATTEMPT';
+    const intelClass = score > 70 ? 'intel-high' : (score > 40 ? 'intel-med' : 'intel-low');
+    const intelText = score > 70 ? 'HIGH TRUST' : (score > 40 ? 'MODERATE TRUST' : 'LOW TRUST');
+    const color = score > 70 ? '#00ff9d' : (score > 40 ? '#ffaa00' : '#ff2a2a');
 
     content.innerHTML = `
         <div class="intel-summary">
-            <span class="intel-badge ${intelClass}">${intelText}</span>
-            <div style="font-size:14px; margin-top:5px;">System Confidence: <strong>${score}%</strong></div>
+            <div class="intel-badge" style="background:${color}; color:#000; box-shadow: 0 0 15px ${color};">${intelText}</div>
+            <div style="font-size:14px; margin-top:5px;">AI Confidence: <strong style="color:${color}; font-size:1.2em;">${score}%</strong></div>
         </div>
 
-        <div class="verify-section" style="border-left:3px solid var(--neon-blue);">
+        <div class="verify-section" style="border-left:3px solid ${color};">
             <h3 style="color:var(--neon-green);"><span class="icon">🛡️</span> VERIFICATION LOG</h3>
             <div style="font-size:12px; line-height:1.6; color:#e0e6ed;">
                 ${reasoning}
             </div>
         </div>
 
-        <div class="verify-section">
-            <h3><span class="icon">🌡️</span> METEOROLOGICAL SIGNALS</h3>
-            <div class="nasa-data">
-                <div class="nasa-data-row"><span>LOCAL TEMP</span><span class="nasa-val">${weather?.current?.temperature_2m || 'N/A'}°C</span></div>
-                <div class="nasa-data-row"><span>PRECIPITATION</span><span class="nasa-val">${weather?.current?.rain || 0}mm</span></div>
-                <div class="nasa-data-row"><span>WIND VELOCITY</span><span class="nasa-val">${weather?.current?.wind_speed_10m || 0} km/h</span></div>
+        <div class="verify-grid">
+             <div class="verify-section">
+                <h3><span class="icon">👤</span> IDENTITY</h3>
+                <div class="nasa-data-row"><span>STATUS</span><span class="nasa-val ${user ? 'highlight-green' : 'highlight-amber'}">${user ? 'VERIFIED' : 'GUEST'}</span></div>
+                ${user ? `<div class="nasa-data-row"><span>JOINED</span><span class="nasa-val text-xs">${new Date(user.created_at).toLocaleDateString()}</span></div>` : ''}
+                <div class="nasa-data-row"><span>PHONE</span><span class="nasa-val">${alert.phone}</span></div>
+                <button class="action-btn small outline" onclick="initiateCall('${alert.phone}', '${alert.name}')">📞 CALL</button>
+            </div>
+
+            <div class="verify-section">
+                <h3><span class="icon">🌡️</span> METRICS</h3>
+                <div class="nasa-data-row"><span>TEMP</span><span class="nasa-val">${weather?.current?.temperature_2m || '--'}°C</span></div>
+                <div class="nasa-data-row"><span>WIND</span><span class="nasa-val">${weather?.current?.wind_speed_10m || '--'} km/h</span></div>
+                <div class="nasa-data-row"><span>RISK</span><span class="nasa-val">${hazard ? 'CRITICAL' : 'NORMAL'}</span></div>
             </div>
         </div>
-
+       
         <div class="verify-section">
-            <h3><span class="icon">🌊</span> NEAREST BUOY STATUS</h3>
-            ${sensors.length > 0 ? `
-                <div class="nasa-data-row"><span>SENSOR ID</span><span class="nasa-val">${sensors[0].id}</span></div>
-                <div class="nasa-data-row"><span>REL_DISTANCE</span><span class="nasa-val">~${(Math.random() * 5).toFixed(1)}km</span></div>
-                <div class="nasa-data-row"><span>LEVEL</span><span class="nasa-val ${sensors[0].water_level > 4.5 ? 'highlight-red' : ''}">${sensors[0].water_level}m</span></div>
-            ` : '<p style="font-size:11px; opacity:0.6;">No active buoys in this immediate sector.</p>'}
-        </div>
-
-        <div class="verify-section">
-            <h3><span class="icon">🏁</span> COMMAND DECISION</h3>
-            <p style="font-size:13px; font-weight:bold; color:${score > 60 ? 'var(--neon-green)' : 'var(--neon-red)'};">
-                ${score > 60
-            ? "SOURCE AUTHENTICATED. DEPLOY ALL AVAILABLE RESCUE ASSETS."
-            : "UNRESOLVED DISCREPANCIES. INVESTIGATE FOR POTENTIAL FALSE ALARM."}
+            <h3><span class="icon">🏁</span> COMMAND RECOMMENDATION</h3>
+            <p style="font-size:13px; font-weight:bold; color:${color};">
+                ${score > 70
+            ? "✅ HIGH PRIORITY: IMMEDIATE DEPLOYMENT RECOMMENDED."
+            : (score > 40 ? "⚠️ CHECK REQUIRED: ATTEMPT CONTACT BEFORE DEPLOYING." : "⛔ LOW PRIORITY: FLAGGED AS POTENTIAL SPAM.")}
             </p>
         </div>
     `;
@@ -574,6 +621,158 @@ async function fetchLocalNews(location) {
         return [];
     }
 }
+
+// --- SOS VERIFICATION LOGIC (NEWS & NASA GUARDIAN) ---
+// ... (previous logic up to line 577)
+
+
+// --- TWILIO VOICE INTEGRATION ---
+let twilioDevice = null;
+let currentConnection = null;
+
+async function setupTwilioDevice() {
+    try {
+        console.log("Initializing Voice Uplink...");
+
+        // MOCK TOKEN: In production, fetch this from your backend
+        // const response = await fetch('/api/voice-token');
+        // const data = await response.json();
+        const token = "MOCK_TWILIO_TOKEN_FOR_DEMO";
+
+        if (typeof Twilio !== 'undefined') {
+            twilioDevice = new Twilio.Device(token, {
+                codecPreferences: ['opus', 'pcmu'],
+                fakeLocalDTMF: true,
+                enableRingingState: true
+            });
+
+            twilioDevice.on('ready', (device) => {
+                console.log('Secure Line Ready');
+            });
+
+            twilioDevice.on('error', (error) => {
+                console.warn('Voice Protocol Error:', error.message);
+            });
+        }
+    } catch (e) {
+        console.error("Voice setup failed:", e);
+    }
+}
+
+// Initialize on load
+setupTwilioDevice();
+
+// --- CALL INTERFACE LOGIC ---
+let callTimerInterval = null;
+let callDurationSeconds = 0;
+
+function initiateCall(phone, name) {
+    const overlay = document.getElementById('call-interface-overlay');
+    const nameEl = document.getElementById('call-name');
+    const numberEl = document.getElementById('call-number');
+    const statusEl = document.getElementById('call-status');
+    const timerEl = document.getElementById('call-timer');
+    const avatarText = document.querySelector('.call-avatar-text');
+
+    if (!overlay) return;
+
+    // Reset State
+    stopCallTimer();
+    callDurationSeconds = 0;
+    if (timerEl) {
+        timerEl.textContent = "00:00";
+        timerEl.classList.remove('visible');
+    }
+
+    // Set Details
+    if (nameEl) nameEl.textContent = name || "Unknown Caller";
+    if (numberEl) numberEl.textContent = phone || "Unknown Number";
+    if (statusEl) {
+        statusEl.textContent = "ESTABLISHING UPLINK...";
+        statusEl.style.color = "var(--neon-amber)";
+    }
+    if (avatarText) avatarText.textContent = name ? name.substring(0, 2).toUpperCase() : "?";
+
+    // Show Overlay
+    overlay.classList.add('active');
+
+    // Attempt Verification Call
+    if (twilioDevice) {
+        const params = { To: phone };
+        // This will connect if the token is valid. 
+        // Since we are mocking, we simulate the state changes visually.
+        // currentConnection = twilioDevice.connect(params);
+
+        // SIMULATION FOR DEMO (Since we lack a backend token server)
+        setTimeout(() => {
+            if (statusEl) statusEl.textContent = "SECURE HANDSHAKE...";
+        }, 1000);
+
+        setTimeout(() => {
+            if (statusEl) {
+                statusEl.textContent = "VOICE CHANNEL OPEN";
+                statusEl.style.color = "var(--neon-green)";
+            }
+            startCallTimer();
+        }, 2500);
+
+    } else {
+        // Fallback if SDK fails
+        statusEl.textContent = "SDK OFFLINE - DIALING NATIVE...";
+        setTimeout(() => window.location.href = `tel:${phone}`, 1500);
+    }
+}
+
+function startCallTimer() {
+    const timerEl = document.getElementById('call-timer');
+    if (timerEl) timerEl.classList.add('visible');
+
+    callTimerInterval = setInterval(() => {
+        callDurationSeconds++;
+        const mins = Math.floor(callDurationSeconds / 60).toString().padStart(2, '0');
+        const secs = (callDurationSeconds % 60).toString().padStart(2, '0');
+        if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+    }, 1000);
+}
+
+function stopCallTimer() {
+    if (callTimerInterval) clearInterval(callTimerInterval);
+}
+
+function endCall() {
+    if (currentConnection) {
+        currentConnection.disconnect();
+        currentConnection = null;
+    }
+
+    stopCallTimer();
+    const overlay = document.getElementById('call-interface-overlay');
+    const statusEl = document.getElementById('call-status');
+
+    if (statusEl) {
+        statusEl.textContent = "LINK TERMINATED";
+        statusEl.style.color = "var(--neon-red)";
+    }
+
+    setTimeout(() => {
+        if (overlay) overlay.classList.remove('active');
+    }, 1000);
+}
+
+function toggleMute(btn) {
+    btn.classList.toggle('active');
+    // Logic to actually mute audio stream would go here
+}
+
+function toggleSpeaker(btn) {
+    btn.classList.toggle('active');
+}
+
+// Make globally available
+window.initiateCall = initiateCall;
+window.endCall = endCall;
+window.toggleMute = toggleMute;
+window.toggleSpeaker = toggleSpeaker;
 
 async function fetchNASAData(lat, lng) {
     try {
