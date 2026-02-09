@@ -2,7 +2,10 @@
 
 A comprehensive, real-time situational awareness dashboard designed for monitoring environmental hazards, managing resources, and coordinating disaster response. This system integrates real-time sensor data, geospatial intelligence, and public safety alerts into a unified command center interface.
 
+
 ![Dashboard Preview](img/dashboard-preview.png)
+
+### 🔗 Live Demo: [Disaster Management System](https://disaster-management-system-three.vercel.app/)
 
 ---
 
