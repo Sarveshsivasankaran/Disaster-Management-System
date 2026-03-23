@@ -6,10 +6,12 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../user_profile.dart';
 import 'map_screen.dart';
 import 'social_feed_screen.dart';
+import '../services/sms_service.dart';
 import '../main.dart'; // To access the global notification plugin
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback onLogout;
+  const HomeScreen({super.key, required this.onLogout});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -95,7 +97,10 @@ class _HomeScreenState extends State<HomeScreen> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          DashboardView(onTabChange: (i, [layer]) => _changeTab(i, layer)),
+          DashboardView(
+            onTabChange: (i, [layer]) => _changeTab(i, layer),
+            onLogout: widget.onLogout,
+          ),
           const SocialFeedScreen(),
           MapScreen(key: _mapScreenKey),
           const SOSView(),
@@ -128,7 +133,8 @@ class _HomeScreenState extends State<HomeScreen> {
 // ============================================================================
 class DashboardView extends StatefulWidget {
   final Function(int, [MapLayer?]) onTabChange;
-  const DashboardView({super.key, required this.onTabChange});
+  final VoidCallback onLogout;
+  const DashboardView({super.key, required this.onTabChange, required this.onLogout});
 
   @override
   State<DashboardView> createState() => _DashboardViewState();
@@ -216,7 +222,7 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Widget _buildHeader() {
-    return const Row(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
@@ -233,7 +239,15 @@ class _DashboardViewState extends State<DashboardView> {
                     fontWeight: FontWeight.bold)),
           ],
         ),
-        Icon(Icons.radar, color: Color(0xFF00ff9d), size: 30)
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.logout, color: Colors.white54, size: 20),
+              onPressed: widget.onLogout,
+            ),
+            const Icon(Icons.radar, color: Color(0xFF00ff9d), size: 30),
+          ],
+        )
       ],
     );
   }
@@ -541,6 +555,15 @@ class _SOSViewState extends State<SOSView> {
         'date': dateStr,
         'time': timeStr,
       });
+
+      // 3. BROADCAST VIA SMS (TWILIO)
+      await SmsService.sendSosAlert(
+        name: UserProfile.name,
+        phone: UserProfile.phone,
+        description: description,
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
 
       if (mounted) _showSuccessDialog();
     } catch (e) {
