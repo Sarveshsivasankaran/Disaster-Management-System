@@ -1,2 +1,3 @@
-export const SUPABASE_URL = "https://nqipgzknhlfsrezssoyr.supabase.co";
-export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xaXBnemtuaGxmc3JlenNzb3lyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNzQ4ODYsImV4cCI6MjA3Mzk1MDg4Nn0.M1xc6HtScdDjemguonpPgmo8EF0A93OoHvy4LACO24E";
+// Supabase Credentials - Should be injected or fetched securely
+export const SUPABASE_URL = ""; 
+export const SUPABASE_KEY = "";
