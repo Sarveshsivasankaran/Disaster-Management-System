@@ -3,18 +3,11 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 class SmsService {
-<<<<<<< HEAD
   // TWILIO CREDENTIALS - Should be provided via environment variables or a secure backend
   // For Flutter, consider using --dart-define or the flutter_dotenv package.
-  static const String _accountSid = String.fromEnvironment('TWILIO_ACCOUNT_SID', defaultValue: '');
-  static const String _authToken = String.fromEnvironment('TWILIO_AUTH_TOKEN', defaultValue: '');
-  static const String _twilioNumber = String.fromEnvironment('TWILIO_PHONE_NUMBER', defaultValue: '');
-=======
-  // TWILIO CREDENTIALS
   static const String _accountSid = 'ACa7209437c9427fdbce3c43808c22eb43';
-  static const String _authToken = 'b0a8a2a1dce1b1b8da5b41b5fb0709f9';
+  static const String _authToken = '629d0346ecab6f0ed7bcf2dd06602b8a';
   static const String _twilioNumber = '+16168670252';
->>>>>>> parent of a73e8c8 (Revert "feat: Implement core application UI with home screen, dashboard, bottom navigation, and danger detection system.")
 
   /// Sends an SMS via Twilio REST API
   /// [phone] should be in E.164 format (e.g., +919361488694)

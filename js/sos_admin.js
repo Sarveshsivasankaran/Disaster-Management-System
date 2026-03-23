@@ -234,13 +234,19 @@ function openSOSModal(alertItem) {
             <button class="full-btn btn-accept" onclick="updateSOSStatus('${alertItem.id}', 'ACCEPTED', ${alertItem.latitude}, ${alertItem.longitude}, '${safeDesc}')">
                 ✅ ACCEPT & DEPLOY RESCUE
             </button>
-            <button class="full-btn btn-reject" onclick="updateSOSStatus('${alertItem.id}', 'REJECTED')">
-                ❌ REJECT MARKER
-            </button>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="action-btn outline" style="flex:1;" onclick="toggleSmsInput('${alertItem.phone}')">💬 MESSAGE</button>
+                <button class="full-btn btn-reject" style="flex:1; margin:0;" onclick="updateSOSStatus('${alertItem.id}', 'REJECTED')">
+                    ❌ REJECT
+                </button>
+            </div>
         `;
     } else {
         actions.innerHTML = `
-            <button class="full-btn" style="border:1px solid #555; color:#aaa;" onclick="closeSOSModal()">CLOSE DETAILS</button>
+            <div style="display:flex; gap:10px; width:100%;">
+                <button class="action-btn outline" style="flex:1;" onclick="toggleSmsInput('${alertItem.phone}')">💬 MESSAGE</button>
+                <button class="action-btn" style="flex:1; border:1px solid #555; color:#aaa;" onclick="closeSOSModal()">CLOSE</button>
+            </div>
         `;
     }
 
@@ -587,7 +593,10 @@ function renderDeepVerificationPanel(alert, location, weather, sensors, news, na
                 <div class="nasa-data-row"><span>STATUS</span><span class="nasa-val ${user ? 'highlight-green' : 'highlight-amber'}">${user ? 'VERIFIED' : 'GUEST'}</span></div>
                 ${user ? `<div class="nasa-data-row"><span>JOINED</span><span class="nasa-val text-xs">${new Date(user.created_at).toLocaleDateString()}</span></div>` : ''}
                 <div class="nasa-data-row"><span>PHONE</span><span class="nasa-val">${alert.phone}</span></div>
-                <button class="action-btn small outline" onclick="initiateCall('${alert.phone}', '${alert.name}')">📞 CALL</button>
+                <div style="display:flex; gap:5px; margin-top:10px;">
+                    <button class="action-btn small outline" style="flex:1;" onclick="initiateCall('${alert.phone}', '${alert.name}')">📞 CALL</button>
+                    <button class="action-btn small outline" style="flex:1;" onclick="sendVerificationOtp('${alert.phone}')">🔐 OTP</button>
+                </div>
             </div>
 
             <div class="verify-section">
@@ -797,7 +806,51 @@ async function fetchNASAData(lat, lng) {
 // Make globally available
 window.verifySOSAlert = verifySOSAlert;
 
-// Update DOMContentLoaded to ensure verification panel is ready
+// --- SMS INTEGRATION LOGIC ---
+
+function toggleSmsInput(phone) {
+    const area = document.getElementById('sos-sms-input-area');
+    const btn = document.getElementById('send-manual-sms-btn');
+    const input = document.getElementById('manual-sms-text');
+    
+    if (area.style.display === 'none') {
+        area.style.display = 'block';
+        btn.onclick = async () => {
+            const msg = input.value.trim();
+            if (!msg) return;
+            
+            btn.disabled = true;
+            btn.textContent = "⌛ SENDING...";
+            
+            const res = await window.SmsService.sendSms(phone, msg);
+            if (res.success) {
+                alert("Message sent successfully!");
+                input.value = '';
+                area.style.display = 'none';
+            } else {
+                alert("Failed to send SMS: " + res.error);
+            }
+            btn.disabled = false;
+            btn.textContent = "📬 SEND MESSAGE";
+        };
+    } else {
+        area.style.display = 'none';
+    }
+}
+
+async function sendVerificationOtp(phone) {
+    if (!confirm(`Send a secure verification code to ${phone}?`)) return;
+    
+    const res = await window.SmsService.sendOtp(phone);
+    if (res.success) {
+        alert(`Verification code ${res.otp} sent to ${phone}. Please verify it with the victim during the call.`);
+    } else {
+        alert("Failed to send OTP: " + res.error);
+    }
+}
+
+window.toggleSmsInput = toggleSmsInput;
+window.sendVerificationOtp = sendVerificationOtp;
 document.addEventListener('DOMContentLoaded', () => {
     // Only run if we are on the admin page
     if (document.getElementById('sos-feed-container')) {

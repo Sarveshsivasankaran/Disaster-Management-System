@@ -434,6 +434,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/supabaseClient.js"></script>
     <script type="module" src="main/alerts_feed.js"></script>
+    <script src="js/sms_service.js"></script>
     <script src="js/sos_admin.js"></script>
 
     <!-- Notification Popup -->
@@ -455,6 +456,12 @@
             </div>
             <div id="sos-modal-body" class="custom-modal-body">
                 <!-- Content Injected via JS -->
+            </div>
+            <div id="sos-sms-input-area" style="padding: 0 25px 15px; display:none;">
+                <div class="sms-input-group">
+                    <input type="text" id="manual-sms-text" class="neon-input" placeholder="Type message to victim..." style="width: 100%;">
+                    <button class="action-btn small" id="send-manual-sms-btn" style="margin-top: 10px; width: 100%;">📬 SEND MESSAGE</button>
+                </div>
             </div>
             <div id="sos-modal-actions" class="custom-modal-actions">
                 <!-- Actions Injected via JS -->

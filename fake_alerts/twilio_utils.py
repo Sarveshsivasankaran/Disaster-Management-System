@@ -1,10 +1,12 @@
 import os
 from twilio.rest import Client
-<<<<<<< HEAD
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file in the project root
+# Assuming the root is two levels up from this file (fake_alerts/twilio_utils.py)
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 class TwilioSMS:
     # TWILIO CREDENTIALS loaded from environment variables
@@ -13,21 +15,16 @@ class TwilioSMS:
     FROM_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
 
     def __init__(self):
-        if not self.ACCOUNT_SID or not self.AUTH_TOKEN:
-            print("Error: Twilio credentials not found in environment variables.")
+        missing = []
+        if not self.ACCOUNT_SID: missing.append("TWILIO_ACCOUNT_SID")
+        if not self.AUTH_TOKEN: missing.append("TWILIO_AUTH_TOKEN")
+        if not self.FROM_NUMBER: missing.append("TWILIO_PHONE_NUMBER")
+        
+        if missing:
+            print(f"Error: Missing environment variables: {', '.join(missing)}")
+            print(f"Attempted to load from: {env_path}")
             self.client = None
             return
-=======
-
-class TwilioSMS:
-    # TWILIO CREDENTIALS
-    ACCOUNT_SID = 'ACa7209437c9427fdbce3c43808c22eb43'
-    # In a real scenario, this should be an environment variable
-    AUTH_TOKEN = 'b0a8a2a1dce1b1b8da5b41b5fb0709f9' 
-    FROM_NUMBER = '+16168670252'
-
-    def __init__(self):
->>>>>>> parent of a73e8c8 (Revert "feat: Implement core application UI with home screen, dashboard, bottom navigation, and danger detection system.")
         self.client = Client(self.ACCOUNT_SID, self.AUTH_TOKEN)
 
     def send_message(self, to_number, body):
@@ -37,12 +34,9 @@ class TwilioSMS:
         :param body: The message content.
         :return: The message SID if successful, None otherwise.
         """
-<<<<<<< HEAD
         if not self.client:
             print("Twilio client not initialized. Cannot send message.")
             return None
-=======
->>>>>>> parent of a73e8c8 (Revert "feat: Implement core application UI with home screen, dashboard, bottom navigation, and danger detection system.")
         try:
             message = self.client.messages.create(
                 from_=self.FROM_NUMBER,

@@ -26,14 +26,14 @@ def insert_news_alert(alert: dict):
         existing = supabase.table("alerts").select("id").eq("title", alert["title"]).execute()
         
         if existing.data and len(existing.data) > 0:
-            print(f"⚠️ Duplicate skipped: {alert['title'][:30]}...")
+            print(f"Duplicate skipped: {alert['title'][:30]}...")
             return None
 
         # Insert
         response = supabase.table("alerts").insert(alert).execute()
-        print(f"✅ Inserted: {alert['title'][:30]}...")
+        print(f"Inserted: {alert['title'][:30]}...")
         return response
     
     except Exception as e:
-        print(f"❌ Error inserting: {e}")
+        print(f"Error inserting: {e}")
         return None

@@ -9,7 +9,8 @@ import 'social_feed_screen.dart';
 import '../main.dart'; // To access the global notification plugin
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback onLogout;
+  const HomeScreen({super.key, required this.onLogout});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -99,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SocialFeedScreen(),
           MapScreen(key: _mapScreenKey),
           const SOSView(),
+          ProfileView(onLogout: widget.onLogout),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -117,6 +119,8 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.map_rounded), label: "Map"),
           BottomNavigationBarItem(
               icon: Icon(Icons.emergency_share), label: "Report"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_rounded), label: "Profile"),
         ],
       ),
     );
@@ -648,6 +652,98 @@ class _SOSViewState extends State<SOSView> {
                           ]),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// PROFILE VIEW
+// ============================================================================
+class ProfileView extends StatelessWidget {
+  final VoidCallback onLogout;
+  const ProfileView({super.key, required this.onLogout});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 40),
+          const Text(
+            "USER PROFILE",
+            style: TextStyle(
+              color: Color(0xFF00ff9d),
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 40),
+          _buildInfoItem("NAME", UserProfile.name, Icons.person_outline),
+          const SizedBox(height: 20),
+          _buildInfoItem("PHONE", UserProfile.phone, Icons.phone_android_outlined),
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            height: 55,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: const Color(0xFF0f172a),
+                    title: const Text("Log Out?", style: TextStyle(color: Colors.white)),
+                    content: const Text("Are you sure you want to log out?", style: TextStyle(color: Colors.white70)),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+                      TextButton(onPressed: () {
+                        Navigator.pop(ctx);
+                        onLogout();
+                      }, child: const Text("LOGOUT", style: TextStyle(color: Colors.red))),
+                    ],
+                  ),
+                );
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text("LOGOUT ACCOUNT", style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.withOpacity(0.1),
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white54),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(color: Colors.white54, fontSize: 10, letterSpacing: 1.5)),
+              const SizedBox(height: 4),
+              Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
           ),
         ],
       ),
