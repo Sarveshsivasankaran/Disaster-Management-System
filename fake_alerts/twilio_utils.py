@@ -1,5 +1,6 @@
 import os
 from twilio.rest import Client
+<<<<<<< HEAD
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -16,6 +17,17 @@ class TwilioSMS:
             print("Error: Twilio credentials not found in environment variables.")
             self.client = None
             return
+=======
+
+class TwilioSMS:
+    # TWILIO CREDENTIALS
+    ACCOUNT_SID = 'ACa7209437c9427fdbce3c43808c22eb43'
+    # In a real scenario, this should be an environment variable
+    AUTH_TOKEN = 'b0a8a2a1dce1b1b8da5b41b5fb0709f9' 
+    FROM_NUMBER = '+16168670252'
+
+    def __init__(self):
+>>>>>>> parent of a73e8c8 (Revert "feat: Implement core application UI with home screen, dashboard, bottom navigation, and danger detection system.")
         self.client = Client(self.ACCOUNT_SID, self.AUTH_TOKEN)
 
     def send_message(self, to_number, body):
@@ -25,9 +37,12 @@ class TwilioSMS:
         :param body: The message content.
         :return: The message SID if successful, None otherwise.
         """
+<<<<<<< HEAD
         if not self.client:
             print("Twilio client not initialized. Cannot send message.")
             return None
+=======
+>>>>>>> parent of a73e8c8 (Revert "feat: Implement core application UI with home screen, dashboard, bottom navigation, and danger detection system.")
         try:
             message = self.client.messages.create(
                 from_=self.FROM_NUMBER,
