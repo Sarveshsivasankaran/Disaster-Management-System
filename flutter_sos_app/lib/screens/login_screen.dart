@@ -1,8 +1,9 @@
 import 'dart:math';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../user_profile.dart';
-import '../services/sms_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLogin;
@@ -39,7 +40,8 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint("SYSTEM: Generated OTP for $phone is $_manualOTP");
 
       // 2. Trigger SMS Gateway (HTTP API)
-      bool smsSent = await SmsService.sendOtp(phone, _manualOTP);
+      // Replace with your actual SMS provider URL (e.g., Twilio, Fast2SMS, MessageBird)
+      bool smsSent = await _sendSmsViaGateway(phone, _manualOTP);
 
       if (smsSent) {
         setState(() {
@@ -63,6 +65,42 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // Twilio Integration for SMS OTP
+  Future<bool> _sendSmsViaGateway(String phone, String code) async {
+    // TWILIO CREDENTIALS - PLEASE FILL THESE IN
+    const String accountSid = 'ACa7209437c9427fdbce3c43808c22eb43';
+    const String authToken =
+        'b0a8a2a1dce1b1b8da5b41b5fb0709f9'; // Provided Auth Token
+    const String twilioNumber = '+16168670252'; // e.g., '+1234567890'
+
+    // Ensure phone is in E.164 format (starts with +)
+    String targetPhone = phone.startsWith('+') ? phone : '+$phone';
+
+    final url = Uri.parse(
+        'https://api.twilio.com/2010-04-01/Accounts/$accountSid/Messages.json');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization':
+              'Basic ${base64Encode(utf8.encode('$accountSid:$authToken'))}',
+        },
+        body: {
+          'From': twilioNumber,
+          'To': targetPhone,
+          'Body': 'Your SENTINEL SOS verification code is: $code',
+        },
+      );
+
+      debugPrint(
+          "Twilio HTTP Response: ${response.statusCode} - ${response.body}");
+      return response.statusCode == 201;
+    } catch (e) {
+      debugPrint("Twilio API Connection Error: $e");
+      return false;
+    }
+  }
 
   Future<void> _verifyOTP() async {
     if (_otpController.text.isEmpty) {

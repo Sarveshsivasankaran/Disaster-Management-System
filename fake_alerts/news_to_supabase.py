@@ -1,5 +1,4 @@
 from supabase_client import insert_news_alert
-from twilio_utils import send_alert_sms
 
 # Sample South India disaster news (REALISTIC)
 title = "Heavy Rainfall Triggers Flooding in Chennai Suburbs"
@@ -24,8 +23,3 @@ result = insert_news_alert(
 
 print("News inserted into Supabase successfully")
 print(result)
-
-# Send SMS notification for critical alerts
-if severity == "critical":
-    target_phone = "+919361488694" # Replace with real number or fetch from DB
-    send_alert_sms(target_phone, title, message)

@@ -60,10 +60,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     return UserProfile.isLoggedIn 
-      ? HomeScreen(onLogout: () async {
-          await UserProfile.logout();
-          setState(() {});
-        }) 
+      ? const HomeScreen() 
       : LoginScreen(onLogin: () {
           setState(() {}); 
         });
